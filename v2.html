@@ -1,0 +1,2181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MultiSelect v2 language preview</title>
+<!--
+	Mock of /multiselect-language-v2-preview from webapp (js/modern/components/multi-select-language-preview/,
+	origin/master). Styles are the compiled Slack Kit CSS with light-theme tokens resolved; behavior is a
+	vanilla-JS port of the slack-kit select components. Fonts load from ./fonts.
+-->
+<style>
+@layer sk.base, sk.foundation, sk.core, sk.components;
+
+/* ---------- fonts (Slack-Lato, lato-2, exported from webapp) ---------- */
+@layer sk.base {
+	@font-face { font-family: Slack-Lato; font-style: normal; font-weight: 400; src: url(fonts/lato-regular.woff2) format("woff2"); unicode-range: U+0-2157, U+2159-F8FE, U+F900-FFFF; }
+	@font-face { font-family: Slack-Lato; font-style: normal; font-weight: 700; src: url(fonts/lato-bold.woff2) format("woff2"); unicode-range: U+0-F8FE, U+F900-FFFF; }
+	@font-face { font-family: Slack-Lato; font-style: normal; font-weight: 900; src: url(fonts/lato-black.woff2) format("woff2"); unicode-range: U+0-F8FE, U+F900-FFFF; }
+}
+
+/* ---------- global base (slack_kit_base rollup) ---------- */
+@layer sk.base {
+	body, h1, h2, h3, h4, h5, h6, p, blockquote, pre, dl, dd, ol, ul, form, fieldset, legend, figure, table, th, td, caption, hr { margin: 0; padding: 0; }
+	h1, h2, h3, h4, h5, h6 { font-weight: normal; }
+	html, body { box-sizing: border-box; text-rendering: optimizelegibility; width: 100%; }
+	*, ::before, ::after { box-sizing: inherit; }
+	body {
+		font-family: Slack-Lato, Slack-Fractions, appleLogo, sans-serif;
+		font-size: 15px;
+		line-height: 1.46668;
+		font-weight: initial;
+		letter-spacing: inherit;
+		color: #1d1c1d;
+		font-variant-ligatures: common-ligatures;
+		-moz-osx-font-smoothing: grayscale;
+		-webkit-font-smoothing: antialiased;
+	}
+	h1 { letter-spacing: inherit; font-size: 28px; font-weight: 900; line-height: 1.2143; }
+	strong, b { font-weight: 700; }
+	p, ul, ol { margin-bottom: 16px; }
+	button { cursor: pointer; background-color: transparent; border-width: 0; padding: 0; }
+	input, textarea, select, button { font-family: inherit; }
+	.c-form--small { --sk_input_styles-radius: 8px; }
+	.c-form--large { --sk_input_styles-radius: 12px; }
+}
+:root { color-scheme: light; }
+html, body { height: 100%; }
+
+/* ---------- mock-only page chrome ---------- */
+.mock-launcher { padding: 28px; }
+.offscreen { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---------- helpers ---------- */
+.flow_root { display: flow-root; }
+.padding_top_100 { padding-top: 16px; }
+.margin_bottom_50 { margin-bottom: 8px; }
+.sk_foreground_max { color: rgba(29, 28, 29, 0.7); }
+
+/* ---------- icons (@tinyspeck/icons) ---------- */
+[data-sk-icon] { width: 1em; height: 1em; font-size: var(--s, inherit); print-color-adjust: exact; flex-shrink: 0; display: block; }
+.is-inline { vertical-align: -.125em; display: inline-block; }
+
+/* ---------- modal overlay / dialog ---------- */
+.c-sk-overlay { z-index: 1000; justify-content: center; align-items: center; width: 100%; height: 100%; display: flex; position: fixed; top: 0; left: 0; overflow: auto; }
+.c-sk-overlay::before { content: ""; opacity: 0; background: rgba(0, 0, 0, 0.6); width: 100%; height: 100%; transition: opacity 80ms linear; position: absolute; top: 0; left: 0; }
+.c-sk-overlay.ReactModal__Overlay--after-open:not(.ReactModal__Overlay--before-close)::before { opacity: 1; }
+.c-sk-modal { background-color: #fff; border-radius: 8px; flex-direction: column; max-height: 100%; display: flex; position: relative; overflow: hidden; box-shadow: 0 0 0 1px rgba(29, 28, 29, 0.13), 0 18px 48px 0 rgba(0, 0, 0, 0.35); }
+.c-sk-modal:focus { outline: none; }
+.c-sk-modal--fixed { width: 100%; max-width: 520px; height: auto; }
+@media only screen and (max-width: 640px) { .c-sk-modal--responsive { max-width: 324px; } }
+
+.c-sk-modal__close_button { color: #454447; z-index: 1; position: absolute; top: 20px; right: 20px; }
+.c-sk-modal__close_button:hover { background-blend-mode: multiply; color: #1d1c1d; background-image: linear-gradient(rgba(69, 68, 71, 0.06), rgba(69, 68, 71, 0.06)); }
+@media only screen and (max-width: 640px) { .c-sk-modal__close_button { width: 34px; height: 34px; top: 8px; right: 8px; } }
+@layer sk.foundation {
+	.c-button-unstyled { color: inherit; font-family: inherit; font-size: inherit; font-stretch: inherit; font-style: inherit; font-variant: inherit; font-weight: inherit; line-height: inherit; overflow: initial; text-align: initial; vertical-align: initial; cursor: pointer; background: none; border: 0; margin: 0; padding: 0; }
+	.c-button-unstyled:hover, .c-button-unstyled:focus, .c-button-unstyled:active { outline: none; }
+}
+@layer sk.core {
+	.c-icon_button { --sk_button-styles-radius: 8px; border-radius: var(--sk_button-styles-radius); height: var(--sk_button-size); width: var(--sk_button-size); font-size: calc(.5 * var(--sk_button-size) + 2px); justify-content: center; align-items: center; transition-property: color, background-color, border-color; transition-duration: 80ms; transition-timing-function: cubic-bezier(.36, .19, .29, 1); display: inline-flex; position: relative; }
+	.c-icon_button--size_medium { --sk_button-size: 36px; }
+	.c-icon_button--default { color: #454447; }
+	.c-icon_button--default:hover { color: #1d1c1d; background-color: #eaeaea; }
+	.c-icon_button--default:active { background-blend-mode: multiply; background-image: linear-gradient(rgba(69, 68, 71, 0.13), rgba(69, 68, 71, 0.13)); }
+}
+
+.c-sk-modal_header { background-color: #fff; border-radius: 8px 8px 0 0; flex-shrink: 0; width: 100%; min-height: 70px; overflow: hidden; }
+@media only screen and (max-width: 640px) { .c-sk-modal_header { min-height: 52px; } }
+.c-sk-modal_title_bar { align-items: center; width: 100%; min-height: 70px; padding: 20px 28px; display: flex; }
+.c-sk-modal_title_bar--close_button_visible { padding-right: 76px; }
+@media only screen and (max-width: 640px) {
+	.c-sk-modal_title_bar { min-height: 36px; padding: 8px 8px 8px 16px; }
+	.c-sk-modal_title_bar__text { flex-direction: column; justify-content: center; min-height: 36px; display: flex; }
+	.c-sk-modal_title_bar__text h1:only-child { font-size: 18px; }
+}
+.c-sk-modal_title_bar__text h1 { letter-spacing: inherit; font-size: 18px; font-weight: 900; line-height: 1.33334; }
+.c-sk-modal_title_bar__text h1:only-child { letter-spacing: inherit; font-size: 22px; font-weight: 900; line-height: 1.36365; }
+
+.c-sk-modal_content { background: #fff; flex-shrink: 1; min-height: 50px; display: flex; position: relative; overflow: hidden; }
+.c-sk-modal_content::after { box-sizing: border-box; content: ""; pointer-events: none; border-top: 1px solid transparent; border-bottom: 1px solid transparent; width: 100%; height: 100%; transition: border 80ms linear; position: absolute; inset: 0; }
+.c-sk-modal_content__inner { overflow: hidden; }
+.c-scrollbar { position: relative; overflow: hidden; }
+.c-scrollbar__hider { outline: none; height: 100%; position: absolute; inset: 0 -50px 0 0; overflow: hidden scroll; transform: translateZ(0); }
+.c-scrollbar__hider::-webkit-scrollbar { display: none; }
+.c-scrollbar--inherit_size { width: 100%; }
+.c-scrollbar--inherit_size .c-scrollbar__hider { margin-right: -50px; position: relative; right: 0; }
+.c-scrollbar__track { width: 8px; position: absolute; top: 4px; bottom: 4px; right: 4px; }
+.c-scrollbar--hidden > .c-scrollbar__track { display: none; }
+.c-scrollbar__bar { opacity: 0; cursor: default; z-index: 1; will-change: transform; background: rgba(29, 28, 29, 0.52); border-radius: 4px; outline: none; width: 100%; position: absolute; top: 0; left: 0; }
+.c-sk-modal_content_section { padding: 0 28px; }
+@media only screen and (max-width: 640px) { .c-sk-modal_content_section { padding: 0 16px; } }
+.c-sk-modal_footer { background-color: #fff; border-radius: 0 0 8px 8px; flex-shrink: 0; justify-content: flex-end; align-items: center; width: 100%; height: 84px; margin-top: auto; padding: 24px 28px; display: flex; overflow: hidden; }
+@media only screen and (max-width: 640px) { .c-sk-modal_footer_actions { display: flex; } }
+.c-sk-modal_footer_actions { margin-left: auto; }
+.c-sk-modal_footer_actions > * { vertical-align: bottom; margin-right: 12px; }
+.c-sk-modal_footer_actions > :last-child { margin-right: 0; }
+
+/* ---------- checkbox + inline label ---------- */
+.c-input_checkbox { box-sizing: border-box; display: block; flex: none; margin: 0 12px 0 0; padding: 0 12px; cursor: pointer; background-color: #ffffff; font-size: 18px; }
+.c-input_checkbox[disabled] { cursor: default; }
+.c-input_checkbox:focus { outline-style: auto; }
+.c-input_checkbox--focus-visible:focus { outline: none; box-shadow: 0 0 0 1px #1264a3, 0 0 0 5px rgba(18, 100, 163, 0.3); border-radius: 8px; }
+.c-label { font-size: 15px; line-height: 1.46667; font-weight: 700; }
+.c-label__text { display: block; padding-bottom: 8px; }
+.c-label--inline { display: flex; align-items: baseline; vertical-align: middle; margin-bottom: 4px; }
+.c-label--inline .c-label__text { order: 1; padding-bottom: 0; font-weight: 400; position: relative; top: -1px; }
+.c-label--pointer { cursor: pointer; }
+
+/* ---------- buttons ---------- */
+.c-button { --sk_button-styles-radius: 4px; position: relative; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: var(--sk_button-styles-radius); outline: none; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; cursor: pointer; text-align: center; text-decoration: none; white-space: nowrap; transition-property: color, background-color, border-color; transition-duration: 80ms; transition-timing-function: cubic-bezier(0.36, 0.19, 0.29, 1); }
+.c-button:is(:hover, :active, :focus) { text-decoration: none; }
+.c-button--medium { --sk_button-styles-radius: 8px; min-width: 80px; height: 36px; padding: 0 12px 1px; font-size: 15px; }
+.c-button--primary { background-color: #007a5a; color: #ffffff; font-weight: 700; box-shadow: none; }
+.c-button--primary::after { content: ''; position: absolute; inset: 0; border-radius: var(--sk_button-styles-radius); visibility: hidden; }
+.c-button--primary:hover { background-blend-mode: multiply; background-image: linear-gradient(#0a403221, #0a403221); box-shadow: 0 1px 3px 0 #00000019, 0 1px 2px -1px #00000019; color: #ffffff; }
+.c-button--primary:active { background-blend-mode: multiply; background-image: linear-gradient(#0a403238, #0a403238); box-shadow: none; }
+.c-button--outline { background-color: #ffffff; border: 1px solid #5e5d6073; background-clip: padding-box; color: #1d1c1d; font-weight: 700; }
+.c-button--outline:hover { background-color: #f8f8f8; box-shadow: 0 1px 3px 0 #00000019, 0 1px 2px -1px #00000019; }
+.c-button--outline:active { background-color: #f8f8f8; box-shadow: none; }
+.c-button--outline.c-button--focus-visible:focus { border: 1px solid rgba(255, 255, 255, 0); background-clip: initial; }
+.c-button--focus-visible:focus { outline: none; box-shadow: 0 0 0 1px #1264a3, 0 0 0 5px rgba(18, 100, 163, 0.3); border-radius: 8px; }
+
+/* ---------- token (_common.token.source.less, plain token rules) ---------- */
+.c-token { --sk_avatar-border-radius: 4px; --sk_base_icon-border-radius: 4px; color: #1d1c1d; white-space: nowrap; background-color: #36c5f021; border: 1px solid #0000; border-radius: 4px; align-items: center; padding-right: 4px; font-weight: 700; display: flex; }
+.c-token__content { align-items: center; display: flex; position: relative; }
+.c-token_content__inner { align-items: center; padding: 0 4px; display: flex; }
+.c-token_content__inner ::selection { background-color: #0000; }
+.c-token--large { min-height: 32px; margin: 5px 0 0 5px; font-size: 20px; }
+.c-token--large .c-token_content__label { font-size: 18px; line-height: 32px; }
+.c-token--selected:not(.c-token--loading, .c-token--invalid, .c-token--disabled, .c-token--error, .c-token--unknown, .c-token--restricted) { color: #fff; background-color: #1264a3; }
+.c-token--noMargin { margin: 0; }
+.c-token--disabled, .c-token--disabled:hover { color: #454447; background-color: #1d1c1d0f; }
+.c-truncate { -webkit-line-clamp: var(--lines); white-space: break-spaces; -webkit-box-orient: vertical; display: -webkit-box; overflow: hidden; }
+.c-truncate--break_words { word-break: break-all; }
+
+/* ---------- options list popover ---------- */
+.c-popover:not(.c-popover--overlay-inherit) { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.c-popover--fade { animation: 1s ease 0s 1 normal forwards c-popover-fade; }
+@keyframes c-popover-fade { from { opacity: 0; } to { opacity: 1; } }
+.c-popover--fade .ReactModal__Content { transition: none; }
+.c-popover--fade .ReactModal__Content--before-close { opacity: 0; transition-property: opacity; }
+.c-popover--fade.ReactModal__Overlay--before-close { pointer-events: none; }
+.c-popover--z_above_fs { z-index: 1053; }
+
+.c-select_options_list__wrapper { background-color: #f8f8f8; border-radius: 4px; box-shadow: 0 0 0 1px rgba(29, 28, 29, 0.13), 0 5px 10px rgba(0, 0, 0, 0.12); margin: 0; overflow: hidden; padding: 0; position: relative; -webkit-user-select: none; user-select: none; z-index: 1012; }
+.c-select_options_list__wrapper .c-select_options_list { height: 100%; overflow-y: auto; }
+.c-select_options_list .ReactVirtualized__Grid__innerScrollContainer { will-change: transform; }
+.c-select_options_list:focus { outline-width: 0; }
+.c-select_options_list__option { font-size: 15px; line-height: 1.46668; font-weight: initial; letter-spacing: inherit; display: flex; align-items: center; color: #1d1c1d; cursor: pointer; padding: 0 24px; box-sizing: border-box; }
+.c-select_options_list__option:active, .c-select_options_list__option:focus { outline: none; }
+.c-select_options_list__option--disabled { color: #454447; }
+.c-select_options_list__option--disabled:hover { cursor: default; background-color: #eaeaea; }
+.c-select_options_list__option--selected { color: #1264a3; }
+.c-select_options_list__option--active { background-color: #1264a3; color: #fff; }
+.c-select_options_list__option--active.c-select_options_list__option--disabled { color: #454447; background-color: #eaeaea; }
+.c-select_options_list__option--pseudo-active { background-color: rgba(29, 28, 29, 0.06); }
+.c-select_options_list__option_shortcut { margin-inline-start: 16px; }
+.c-select_options_list__option_label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; box-sizing: border-box; }
+/* The real checkmark is an icon-font glyph (U+E285 in 'Slack v2'); this is its outline as SVG */
+.c-select_options_list__selected { display: inline-flex; width: 0; }
+.c-select_options_list__selected-svg { flex: none; width: 15px; height: 15px; margin: 0 2px 0 -18px; }
+
+/* KeyboardKey (Panda atomic CSS in the real app) */
+@layer panda_utilities {
+	.sk-kbd { display: inline-grid; place-items: center; text-align: center; vertical-align: middle; background-color: #eaeaea; color: #1d1c1d; font-size: 15px; font-weight: 400; line-height: 1; min-width: 1.75rem; height: 1.75rem; padding-block: 0; padding-inline: 0.5rem; margin: 0.25rem; border-radius: 4px; border-block-end-width: 1px; border-block-end-style: solid; border-block-end-color: rgba(94, 93, 96, 0.13); }
+	.sk-kbd--slim { height: 1.25rem; min-width: 1.25rem; padding-inline: 0.25rem; font-size: 13px; margin-block-start: 0; margin-inline: 0.25rem; margin-block-end: 0.25rem; }
+	.sk-kbd--flush { margin: 0; }
+	.sk-kbd--slim.sk-kbd--flush { margin-block-start: 0; margin-inline: 0; margin-block-end: 0; }
+}
+
+/* ---------- field errors (InlineAlert) ---------- */
+.c-inline_alert { color: #c01343; margin: 4px 0; font-size: 13px; font-weight: 400; }
+.c-field_input__helpers { margin-top: 8px; margin-bottom: 4px; }
+.c-field_input__helpers + .c-field_input__helpers { margin-top: 0; margin-bottom: 4px; }
+
+/* ---------- v2 MultiSelectV2 (multi-select-v2.module.less) ---------- */
+.ms2-inputContainer { color: #1d1c1d; background-color: #fff; border: 1px solid #7c7a7f; border-radius: 8px; flex-wrap: wrap; align-items: center; gap: 4px; padding: 4px; font-size: 15px; display: flex; position: relative; overflow: hidden; }
+.ms2-disabledInputContainer { background-color: #f8f8f8; }
+.ms2-disabledInputContainer .ms2-input:focus-visible { border-radius: 4px; box-shadow: 0 0 0 1px #1264a3, 0 0 0 5px #1264a34d; }
+.ms2-largeInputContainer { font-size: 18px; }
+.ms2-invalidInputContainer { border-color: #e01e5a; }
+.ms2-invalidInputContainer:focus, .ms2-invalidInputContainer:focus-within { box-shadow: 0 0 0 1px #e01e5a, 0 0 0 5px #e01e5a4d; }
+.ms2-tokenOption { cursor: pointer; }
+.ms2-tokenOptionDisabled { cursor: default; }
+.ms2-tokensListbox { flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; display: flex; }
+.ms2-tokensListbox:focus { outline: none; }
+.ms2-tokensListbox:focus-visible .ms2-activeTokenOption { border-radius: 4px; box-shadow: 0 0 0 1px #1264a3, 0 0 0 5px #1264a34d; }
+.ms2-inputWrapper { flex: auto; }
+.ms2-input { white-space: pre-wrap; overflow-wrap: anywhere; outline: none; min-width: 1px; min-height: 1lh; position: relative; }
+.ms2-input[data-placeholder]::before { content: attr(data-placeholder) / ""; white-space: nowrap; text-overflow: ellipsis; color: #5e5d60; position: absolute; inset-inline: 0; overflow: hidden; }
+.ms2-removeToken { cursor: pointer; color: #1d1c1d; align-items: center; display: inline-flex; }
+.ms2-removeToken:hover { background-color: #1d1c1d0f; }
+.ms2-removeTokenSelected { color: #fff; }
+.ms2-removeTokenSelected:hover { background-color: #ffffff2e; }
+/* FieldErrors renders a fragment; this wrapper adds no box */
+.ms2-fieldErrors { display: contents; }
+
+</style>
+</head>
+<body>
+<div class="mock-launcher" data-launcher hidden>
+	<button class="c-button c-button--primary c-button--medium" type="button">Open preview</button>
+</div>
+<script>
+/* ==========================================================================
+   Shared mock runtime: React-style batching, fuzzy filter, announcer, and the
+   SelectPopoverOptionsList + SelectOptionsList port (multiSelectMode only).
+   ========================================================================== */
+
+const isMac = () => /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
+const uuid = () => Math.random().toString(36).slice(2);
+const buddyId = (id, type) => `${id}_${type}`;
+const escapeHtml = (s) =>
+	String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+function setAttr(el, name, value) {
+	if (value === null || value === undefined) el.removeAttribute(name);
+	else if (el.getAttribute(name) !== String(value)) el.setAttribute(name, String(value));
+}
+
+// isPrintableKeyEvent
+const isPrintableKeyEvent = (e) => !!e && !e.metaKey && !e.ctrlKey && e.key?.length === 1;
+
+/* --------------------------------------------------------------------------
+   Store: a tiny stand-in for React state. setState calls made while an event
+   handler (or a commit) is running are queued and applied together once the
+   outermost handler returns, so handlers read the last committed state just
+   like props/state in React.
+   -------------------------------------------------------------------------- */
+function createStore(initialState, commit) {
+	let state = initialState;
+	let depth = 0;
+	let flushing = false;
+	const queue = [];
+
+	const flush = () => {
+		if (flushing) return;
+		flushing = true;
+		try {
+			while (queue.length) {
+				const batch = queue.splice(0);
+				const prev = state;
+				let next = state;
+				batch.forEach(({ update }) => {
+					const changes = typeof update === 'function' ? update(next) : update;
+					if (changes) next = { ...next, ...changes };
+				});
+				state = next;
+				depth += 1;
+				try {
+					commit(prev, state);
+					batch.forEach(({ callback }) => callback && callback());
+				} finally {
+					depth -= 1;
+				}
+			}
+		} finally {
+			flushing = false;
+		}
+	};
+
+	return {
+		get: () => state,
+		set(update, callback) {
+			queue.push({ update, callback });
+			if (depth === 0) flush();
+		},
+		// Wraps an event handler so the state updates it makes are batched.
+		batched(fn) {
+			return function batchedHandler(...args) {
+				depth += 1;
+				try {
+					return fn.apply(this, args);
+				} finally {
+					depth -= 1;
+					if (depth === 0) flush();
+				}
+			};
+		},
+		forceCommit() {
+			queue.push({ update: null });
+			if (depth === 0) flush();
+		},
+	};
+}
+
+/* --------------------------------------------------------------------------
+   Announcer API stand-in (polite + assertive live regions)
+   -------------------------------------------------------------------------- */
+const announcer = (() => {
+	let regions = null;
+	const ensure = () => {
+		if (regions) return regions;
+		regions = {};
+		['polite', 'assertive'].forEach((politeness) => {
+			const el = document.createElement('div');
+			el.className = 'offscreen';
+			el.setAttribute('aria-live', politeness);
+			el.setAttribute('aria-atomic', 'true');
+			document.body.appendChild(el);
+			regions[politeness] = el;
+		});
+		return regions;
+	};
+	return {
+		send({ message, assertive = false, deferBy = 0 }) {
+			if (!message) return;
+			const run = () => {
+				const el = ensure()[assertive ? 'assertive' : 'polite'];
+				el.textContent = '';
+				setTimeout(() => {
+					el.textContent = message;
+				}, 30);
+			};
+			if (deferBy) setTimeout(run, deferBy);
+			else run();
+		},
+	};
+})();
+
+/* --------------------------------------------------------------------------
+   FuzzyMatcher + defaultFilter (fuzzyLimit 3; no CJK, no beyond-word-boundary)
+   -------------------------------------------------------------------------- */
+const SEPARATOR_CHARS = /[- _'.\u2019\u200b()/\uFF0F]/gu;
+const NEEDS_NORMALIZING = /[^\x20-\x7f]|[A-Z]|^ | $| {2}/;
+const deburr = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+function normalizeStringForMatching(str = '') {
+	if (typeof str !== 'string') return '';
+	if (str.length && !NEEDS_NORMALIZING.test(str)) return str;
+	const trimmed = str.trim();
+	if (!trimmed.length) return '';
+	return deburr(trimmed.toLocaleLowerCase()).replace(/\s+/g, ' ');
+}
+
+class FuzzyMatcher {
+	constructor(query, options = {}) {
+		this.normalizedQuery = normalizeStringForMatching(query);
+		this.queryNode = FuzzyMatcher.queryToLinkedList(this.normalizedQuery);
+		this.fuzzyLimit = options.fuzzyLimit ?? Infinity;
+		this.queryNoSeparators = this.normalizedQuery.replace(SEPARATOR_CHARS, '');
+	}
+
+	normalizeAndScore(sourceString) {
+		const normalized = normalizeStringForMatching(sourceString);
+		if (normalized === this.normalizedQuery) return 0;
+		return this.score(normalized);
+	}
+
+	score(sourceString) {
+		if (!sourceString) return Infinity;
+		const sourceNoSeparators = sourceString.replace(SEPARATOR_CHARS, '');
+		if (this.queryNoSeparators.length > sourceNoSeparators.length) return Infinity;
+		if (!FuzzyMatcher.containsAllLetters(sourceString, this.queryNode) || !this.queryNode) {
+			return Infinity;
+		}
+		const node = FuzzyMatcher.lettersToGraph(sourceString);
+		if (!node) return Infinity;
+		const result = FuzzyMatcher.searchWordBoundariesOnly(node, this.queryNode);
+		if (!result) return Infinity;
+		const summedUp = FuzzyMatcher.countResult(result);
+		return summedUp > this.fuzzyLimit ? Infinity : summedUp;
+	}
+
+	static lettersToGraph(str) {
+		const letters = str.split('');
+		const first = letters.shift();
+		return FuzzyMatcher.lettersToGraphWorker(first, null, letters, [], 0);
+	}
+
+	static lettersToGraphWorker(letter, prev, rest, jumps, index) {
+		if (!letter) return null;
+		const node = {
+			letter,
+			ignored: letter.match(SEPARATOR_CHARS),
+			next: null,
+			prev,
+			jumps,
+			visited: false,
+			index,
+		};
+		const shouldAddJump = !node.ignored && (!prev || (prev.ignored && !node.ignored));
+		if (shouldAddJump && jumps.length < 5) jumps.push(node);
+		const nextNode = FuzzyMatcher.lettersToGraphWorker(rest.shift(), node, rest, jumps, index + 1);
+		if (nextNode) node.next = nextNode;
+		return node;
+	}
+
+	static queryToLinkedList(query) {
+		if (!query) return null;
+		let letters = query.split('');
+		if (letters.length > 1024) letters = letters.slice(0, 1024);
+		return FuzzyMatcher.queryToLinkedListWorker(letters, 0);
+	}
+
+	static queryToLinkedListWorker(letters, index) {
+		if (index >= letters.length) return null;
+		const letter = letters[index];
+		return {
+			letter,
+			isSeparator: !!(letter.match(SEPARATOR_CHARS) && (index !== 0 || letters.length > 1)),
+			next: FuzzyMatcher.queryToLinkedListWorker(letters, index + 1),
+			index,
+		};
+	}
+
+	static searchWordBoundariesOnly(node, queryNode) {
+		let result = FuzzyMatcher.searchWorker(node, queryNode, 0);
+		if (!result) {
+			result = node.jumps.reduce((match, jumpNode) => {
+				if (match || jumpNode === node) return match;
+				return FuzzyMatcher.searchWorker(jumpNode, queryNode, 1);
+			}, null);
+		}
+		return result;
+	}
+
+	static searchWorker(node, queryNode, score) {
+		if (!node || !queryNode) return null;
+		let thisMatch;
+		if (!node.visited && (node.letter === queryNode.letter || (node.ignored && queryNode.isSeparator))) {
+			thisMatch = { node, count: score };
+		}
+		if (!thisMatch) return null;
+		if (!queryNode.next) return thisMatch;
+		node.visited = true;
+		let next = FuzzyMatcher.searchWorker(node.next, queryNode.next, 0);
+		let nextQueryNode = queryNode.next;
+		while (nextQueryNode.isSeparator && nextQueryNode.next) nextQueryNode = nextQueryNode.next;
+		if (!next) {
+			next = node.jumps.reduce((result, jumpNode) => {
+				if (result) return result;
+				if (jumpNode.visited || jumpNode === node) return result;
+				return FuzzyMatcher.searchWorker(jumpNode, nextQueryNode, 1);
+			}, null);
+		}
+		node.visited = false;
+		if (next) {
+			thisMatch.next = next;
+			return thisMatch;
+		}
+		return null;
+	}
+
+	static countResult(result) {
+		if (!result) return 0;
+		return result.count + FuzzyMatcher.countResult(result.next);
+	}
+
+	static containsAllLetters(str, queryNode) {
+		let ptr = queryNode;
+		while (ptr) {
+			if (!(ptr.isSeparator || str.includes(ptr.letter))) return false;
+			ptr = ptr.next;
+		}
+		return true;
+	}
+}
+
+function defaultFilter(options, filterQuery) {
+	if (!filterQuery) return options;
+	return options.filter((option) =>
+		isFinite(new FuzzyMatcher(filterQuery, { fuzzyLimit: 3 }).normalizeAndScore(option.label)),
+	);
+}
+
+/* --------------------------------------------------------------------------
+   Options list (SelectPopoverOptionsList + SelectOptionsList, multiSelectMode)
+   -------------------------------------------------------------------------- */
+const DEFAULT_ROW_HEIGHT = 28;
+const MAX_LIST_HEIGHT = 240;
+const LIST_PADDING = 2;
+const INPUT_WIDTH_OVERFLOW = 12;
+const INPUT_HEIGHT_OVERLAP = 4;
+const INPUT_OVERLAP_COMPENSATION = 32;
+const POPOVER_FADE_DURATION = 80;
+const POPOVER_ALLOWANCE_Y = 10;
+const EMPTY_STATE_OPTION_VALUE = 'sk-select-empty-state';
+
+const comboFor = (e) => {
+	const key = { ArrowDown: 'down', ArrowUp: 'up', Enter: 'enter', Tab: 'tab' }[e.key];
+	if (!key) return null;
+	return [e.shiftKey && 'shift', e.altKey && 'alt', e.ctrlKey && 'ctrl', e.metaKey && 'meta', key]
+		.filter(Boolean)
+		.join('+');
+};
+
+/**
+ * host: {
+ *   selectId, getState(), setSelectState(changes, cb?),
+ *   inputEl(), clickRegionEl(), sizingEl(), xAnchorEl?(), offsetY?(),
+ *   persistFilterQueryOnClose, advanceFocusOnTab,
+ *   onSelectionChange(option, isOptionClicked, viaTab), onOptionUnselected?,
+ *   onOptionsListClose(clickedInput?)
+ * }
+ * state: { isExpanded, filterQuery, options, selectedOptions, activeRowIndex,
+ *          pseudoActiveRowIndex, initialActiveOption }
+ */
+class OptionsList {
+	constructor(host, batched) {
+		this.host = host;
+		this.batched = batched;
+		this.mounted = false;
+		this.isMouseMoveEnabled = false;
+		this.rowEls = [];
+		this.rowsKey = null;
+		this.prevSnapshot = null;
+		this.enableMouseMoveTimer = null;
+		this.lastPseudoAnnouncementKey = null;
+		this.onDocumentKeyDown = batched(this.onDocumentKeyDown.bind(this));
+		this.onOverlayMouseDown = this.onOverlayMouseDown.bind(this);
+		this.onOverlayClick = batched(this.onOverlayClick.bind(this));
+		this.measure = this.measure.bind(this);
+	}
+
+	get state() {
+		return this.host.getState();
+	}
+
+	getRows() {
+		const { options } = this.state;
+		if (options && options.length) return options;
+		return [{ label: 'No items', value: EMPTY_STATE_OPTION_VALUE, isDisabled: true }];
+	}
+
+	isOptionSelected(option) {
+		const { selectedOptions } = this.state;
+		if (!selectedOptions || !selectedOptions.length || !option) return false;
+		return selectedOptions.some((selected) => selected.value === option.value);
+	}
+
+	// Called by the host after every commit, like a render pass.
+	update() {
+		const state = this.state;
+		if (!state.isExpanded) {
+			if (this.mounted) this.unmount();
+			return;
+		}
+		if (!this.mounted) {
+			this.mount();
+			return;
+		}
+		const prev = this.prevSnapshot;
+		this.prevSnapshot = this.snapshot();
+		this.render();
+		this.componentDidUpdate(prev);
+	}
+
+	snapshot() {
+		const { options, filterQuery } = this.state;
+		return { optionsKey: (options || []).map((o) => `${o.value}\u0000${o.label}`).join('\u0001'), filterQuery };
+	}
+
+	/* ---------- lifecycle ---------- */
+
+	mount() {
+		this.mounted = true;
+		this.prevSnapshot = this.snapshot();
+		this.isInsideForm = !!this.host.inputEl()?.closest('form');
+		this.buildDom();
+		this.render();
+		document.addEventListener('keydown', this.onDocumentKeyDown);
+		window.addEventListener('resize', this.measure);
+		window.addEventListener('scroll', this.measure);
+		this.resizeObserver = new ResizeObserver(this.measure);
+		[this.host.sizingEl(), this.host.xAnchorEl?.()].forEach((el) => el && this.resizeObserver.observe(el));
+
+		// componentDidMount
+		const { initialActiveOption } = this.state;
+		// a11y_no_auto_highlight_search_multi_select is on: only an Alt/Arrow-key open highlights a row
+		const activeRowIndex = initialActiveOption ? this.getActiveRowIndex() : undefined;
+		const pseudoActiveRowIndex = this.getPseudoActiveRowIndex(activeRowIndex);
+		this.host.setSelectState({ activeRowIndex, pseudoActiveRowIndex, initialActiveOption: undefined });
+		if (typeof activeRowIndex === 'number' && activeRowIndex >= 0) this.scrollToRow(activeRowIndex);
+	}
+
+	componentDidUpdate(prev) {
+		const next = this.prevSnapshot;
+		const hasOptionsChanged = prev.optionsKey !== next.optionsKey;
+		const hasSearchFilterChanged = prev.filterQuery !== next.filterQuery;
+		if (!hasOptionsChanged && !hasSearchFilterChanged) return;
+		const { initialActiveOption } = this.state;
+		// Toggle on: the auto highlight is suppressed, whatever row would have been chosen
+		const activeRowIndex = initialActiveOption !== undefined ? this.getActiveRowIndex() : undefined;
+		const pseudoActiveRowIndex = this.getPseudoActiveRowIndex(activeRowIndex);
+		this.host.setSelectState({ activeRowIndex, pseudoActiveRowIndex });
+		if (typeof activeRowIndex === 'number' && activeRowIndex >= 0) this.scrollToRow(activeRowIndex);
+	}
+
+	unmount() {
+		this.mounted = false;
+		document.removeEventListener('keydown', this.onDocumentKeyDown);
+		window.removeEventListener('resize', this.measure);
+		window.removeEventListener('scroll', this.measure);
+		this.resizeObserver?.disconnect();
+		clearTimeout(this.enableMouseMoveTimer);
+		this.isMouseMoveEnabled = false;
+		this.lastPseudoAnnouncementKey = null;
+		this.lastEmptyAnnouncementKey = null;
+		const portal = this.portal;
+		this.portal = null;
+		this.rowEls = [];
+		this.rowsKey = null;
+		if (!portal) return;
+		// ReactModal closeTimeoutMS: fade the content out, then remove the portal
+		portal.overlay.classList.add('ReactModal__Overlay--before-close');
+		portal.content.classList.add('ReactModal__Content--before-close');
+		setTimeout(() => portal.root.remove(), POPOVER_FADE_DURATION);
+	}
+
+	/* ---------- DOM ---------- */
+
+	buildDom() {
+		const { selectId } = this.host;
+		const root = document.createElement('div');
+		root.className = 'ReactModalPortal';
+		root.innerHTML = `
+			<div class="ReactModal__Overlay ReactModal__Overlay--after-open c-popover c-popover--z_above_fs c-popover--fade" style="animation-duration: ${POPOVER_FADE_DURATION}ms;">
+				<div class="ReactModal__Content ReactModal__Content--after-open popover c-popover__content" role="presentation" tabindex="-1" style="position: absolute; outline: none; transition-duration: ${POPOVER_FADE_DURATION}ms;">
+					<div role="presentation">
+						<div class="c-select_options_list__wrapper" data-qa="${escapeHtml(selectId)}-options-list-wrapper">
+							<div class="c-select_options_list" data-qa="${escapeHtml(selectId)}-options-list" id="${escapeHtml(buddyId(selectId, 'listbox'))}" aria-label="Options" aria-multiselectable="true" role="listbox" tabindex="-1">
+								<div class="ReactVirtualized__Grid ReactVirtualized__List c-select_options_list__virtual_list" role="presentation" no-bootstrap="1" style="box-sizing: content-box; direction: ltr; position: relative; will-change: transform; overflow-x: hidden; padding: 12px 0px;">
+									<div class="ReactVirtualized__Grid__innerScrollContainer" role="presentation" style="width: auto; overflow: hidden; position: relative;"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>`;
+		const overlay = root.querySelector('.c-popover');
+		const content = root.querySelector('.c-popover__content');
+		const listBody = root.querySelector('.c-select_options_list');
+		const grid = root.querySelector('.ReactVirtualized__Grid');
+		const inner = root.querySelector('.ReactVirtualized__Grid__innerScrollContainer');
+		overlay.addEventListener('mousedown', this.onOverlayMouseDown);
+		overlay.addEventListener('click', this.onOverlayClick);
+		// Don't debounce -- enabling must happen before the next mouseenter
+		listBody.addEventListener('mousemove', () => {
+			this.isMouseMoveEnabled = true;
+		});
+		document.body.appendChild(root);
+		this.portal = { root, overlay, content, listBody, grid, inner };
+	}
+
+	render() {
+		if (!this.portal) return;
+		const { selectId } = this.host;
+		const { activeRowIndex, pseudoActiveRowIndex, filterQuery } = this.state;
+		const rows = this.getRows();
+		const rowsKey = rows.map((o) => `${o.value}\u0000${o.label}`).join('\u0001');
+		const { inner } = this.portal;
+
+		if (rowsKey !== this.rowsKey) {
+			this.rowsKey = rowsKey;
+			inner.textContent = '';
+			this.rowEls = rows.map((option, index) => {
+				const row = document.createElement('div');
+				row.setAttribute('role', 'option');
+				row.tabIndex = -1;
+				row.id = buddyId(selectId, `option_${index}`);
+				row.style.cssText = `height: ${DEFAULT_ROW_HEIGHT}px; left: 0px; position: absolute; top: ${index * DEFAULT_ROW_HEIGHT}px; width: 100%;`;
+				row.addEventListener(
+					'click',
+					this.batched(() => this.onOptionClicked(this.getRows()[index])),
+				);
+				row.addEventListener(
+					'mouseenter',
+					this.batched(() => this.onMouseEnteredOption(index)),
+				);
+				row.addEventListener(
+					'mouseleave',
+					this.batched(() => this.onMouseLeftOption()),
+				);
+				inner.appendChild(row);
+				return row;
+			});
+		}
+
+		const setSize = rows.length;
+		rows.forEach((option, index) => {
+			const row = this.rowEls[index];
+			const isActive = typeof activeRowIndex === 'number' && activeRowIndex === index;
+			const isPseudoActive = !isActive && typeof pseudoActiveRowIndex === 'number' && pseudoActiveRowIndex === index;
+			const isSelected = this.isOptionSelected(option);
+			const isDisabled = !!option.isDisabled;
+			const className = [
+				'c-select_options_list__option',
+				isActive && 'c-select_options_list__option--active',
+				isPseudoActive && 'c-select_options_list__option--pseudo-active',
+				isSelected && 'c-select_options_list__option--selected',
+				isDisabled && 'c-select_options_list__option--disabled',
+			]
+				.filter(Boolean)
+				.join(' ');
+			if (row.className !== className) row.className = className;
+			row.setAttribute('aria-selected', String(!!isSelected));
+			row.setAttribute('aria-setsize', String(setSize));
+			row.setAttribute('aria-posinset', String(index + 1));
+			if (isDisabled) row.setAttribute('aria-disabled', 'true');
+			else row.removeAttribute('aria-disabled');
+			if (isActive) row.setAttribute('data-is-active', 'true');
+			else row.removeAttribute('data-is-active');
+
+			const html =
+				(isSelected ? `<span class="c-select_options_list__selected" aria-hidden="true">${CHECK_SMALL_SVG}</span>` : '') +
+				`<span data-qa="${escapeHtml(option.value)}" class="c-select_options_list__option_label">${escapeHtml(option.label)}</span>` +
+				(isPseudoActive ? `<span class="c-select_options_list__option_shortcut">${KEYBOARD_KEY_ENTER_HTML}</span>` : '');
+			if (row.__html !== html) {
+				row.__html = html;
+				row.innerHTML = html;
+			}
+		});
+
+		// Announcements: the pseudo-active option (assertive, 200ms) and the empty state (750ms)
+		if (typeof pseudoActiveRowIndex === 'number' && rows[pseudoActiveRowIndex]) {
+			const option = rows[pseudoActiveRowIndex];
+			const key = `${filterQuery ?? ''}-${String(option.value)}`;
+			if (key !== this.lastPseudoAnnouncementKey) {
+				this.lastPseudoAnnouncementKey = key;
+				announcer.send({ message: option.label, assertive: true, deferBy: 200 });
+			}
+		} else {
+			this.lastPseudoAnnouncementKey = null;
+		}
+		if (rows[0]?.value === EMPTY_STATE_OPTION_VALUE) {
+			if (this.lastEmptyAnnouncementKey !== filterQuery) {
+				this.lastEmptyAnnouncementKey = filterQuery;
+				announcer.send({ message: 'No items', deferBy: 750 });
+			}
+		} else {
+			this.lastEmptyAnnouncementKey = null;
+		}
+
+		this.measure();
+	}
+
+	// Popover + SelectPopoverOptionsList measuring/positioning
+	measure() {
+		if (!this.portal) return;
+		const sizingEl = this.host.sizingEl();
+		if (!sizingEl) return;
+		const targetBounds = sizingEl.getBoundingClientRect();
+		const xAnchorBounds = this.host.xAnchorEl?.()?.getBoundingClientRect() ?? targetBounds;
+		const anchorLeft = Math.min(xAnchorBounds.left, targetBounds.left + targetBounds.width / 2);
+		const rows = this.getRows();
+		const totalRowHeight = rows.length * DEFAULT_ROW_HEIGHT;
+
+		const spaceAbove = targetBounds.top;
+		const spaceBelow = window.innerHeight - targetBounds.bottom;
+		const isPopoverAbove = spaceBelow < Math.min(totalRowHeight, MAX_LIST_HEIGHT) && spaceBelow < spaceAbove;
+		const spaceAboveOrBelow = isPopoverAbove ? targetBounds.top : window.innerHeight - targetBounds.bottom;
+		const maxListHeight = Math.min(spaceAboveOrBelow - INPUT_OVERLAP_COMPENSATION, MAX_LIST_HEIGHT);
+		const width = targetBounds.width + INPUT_WIDTH_OVERFLOW * 2;
+		const height = totalRowHeight >= maxListHeight ? maxListHeight : totalRowHeight;
+		const actualWidth = Math.max(1, width - LIST_PADDING);
+
+		const { grid, inner, content } = this.portal;
+		grid.style.height = `${height}px`;
+		grid.style.width = `${actualWidth}px`;
+		grid.style.overflowY = totalRowHeight > height ? 'auto' : 'hidden';
+		inner.style.height = `${totalRowHeight}px`;
+		inner.style.maxHeight = `${totalRowHeight}px`;
+		inner.style.maxWidth = `${actualWidth}px`;
+		this.listHeight = height;
+
+		// Popover positioning: bottom-left / top-left of the adjusted target bounds
+		const offsetY = this.host.offsetY?.() ?? 0;
+		const { scrollY } = window;
+		const adjusted = {
+			top: targetBounds.top + scrollY + INPUT_HEIGHT_OVERLAP,
+			bottom: targetBounds.bottom + scrollY - INPUT_HEIGHT_OVERLAP,
+			left: anchorLeft - INPUT_WIDTH_OVERFLOW,
+		};
+		const contentRect = content.getBoundingClientRect();
+		let top = isPopoverAbove ? adjusted.top - contentRect.height + offsetY : adjusted.bottom + offsetY;
+		let left = adjusted.left;
+		// keepInBounds (allowanceX = -INPUT_WIDTH_OVERFLOW, allowanceY = 10)
+		const boundaries = {
+			top: scrollY + POPOVER_ALLOWANCE_Y,
+			right: window.innerWidth + INPUT_WIDTH_OVERFLOW,
+			bottom: scrollY + window.innerHeight - POPOVER_ALLOWANCE_Y,
+			left: -INPUT_WIDTH_OVERFLOW,
+		};
+		if (left < boundaries.left) left = boundaries.left;
+		else if (left + contentRect.width > boundaries.right) {
+			left = Math.max(boundaries.left, boundaries.right - contentRect.width);
+		}
+		if (top < boundaries.top) top = boundaries.top;
+		else if (top + contentRect.height > boundaries.bottom) {
+			top = Math.max(boundaries.top, boundaries.bottom - contentRect.height);
+		}
+		content.style.left = `${left}px`;
+		content.style.top = `${top}px`;
+	}
+
+	scrollToRow(index) {
+		const grid = this.portal?.grid;
+		if (!grid) return;
+		const rowTop = index * DEFAULT_ROW_HEIGHT;
+		const rowBottom = rowTop + DEFAULT_ROW_HEIGHT;
+		const height = this.listHeight ?? MAX_LIST_HEIGHT;
+		if (rowTop < grid.scrollTop) grid.scrollTop = rowTop;
+		else if (rowBottom > grid.scrollTop + height) grid.scrollTop = rowBottom - height;
+	}
+
+	/* ---------- active row helpers ---------- */
+
+	getActiveRowIndex() {
+		const { initialActiveOption } = this.state;
+		if (!initialActiveOption) return undefined;
+		const index = this.getRows().findIndex((option) => option.value === initialActiveOption.value);
+		return index >= 0 ? index : undefined;
+	}
+
+	getPseudoActiveRowIndex(activeRowIndex) {
+		if (this.isInsideForm) return undefined;
+		if (typeof activeRowIndex === 'number') return undefined;
+		const rows = this.getRows();
+		if (!rows.length) return undefined;
+		return rows[0].isDisabled ? undefined : 0;
+	}
+
+	getNextActiveRowIndex(current) {
+		const rows = this.getRows();
+		if (!rows.length) return -1;
+		if (current === rows.length - 1) return -1;
+		const start = typeof current === 'number' ? current + 1 : 0;
+		return start < rows.length ? start : -1;
+	}
+
+	getPreviousActiveRowIndex(current) {
+		if (current === 0) return -1;
+		const rows = this.getRows();
+		if (!rows.length) return -1;
+		const start = typeof current === 'number' ? current - 1 : rows.length - 1;
+		return start >= 0 ? start : -1;
+	}
+
+	clearActive() {
+		this.host.setSelectState({
+			activeRowIndex: undefined,
+			pseudoActiveRowIndex: this.getPseudoActiveRowIndex(undefined),
+		});
+	}
+
+	moveTo(index) {
+		this.host.setSelectState({ activeRowIndex: index, pseudoActiveRowIndex: undefined });
+		// Mouse move is disabled while navigating by keyboard, re-enabled 200ms after the last key
+		clearTimeout(this.enableMouseMoveTimer);
+		this.enableMouseMoveTimer = setTimeout(() => {
+			this.isMouseMoveEnabled = true;
+		}, 200);
+		this.scrollToRow(index);
+	}
+
+	/* ---------- key commands (Mousetrap on document) ---------- */
+
+	shouldInterceptKeyEvent(e) {
+		const target = e.target;
+		if (!(target instanceof Element)) return false;
+		if (target.hasAttribute('aria-autocomplete')) return true;
+		if (target.hasAttribute('aria-haspopup')) return true;
+		return !!this.portal?.listBody.contains(target);
+	}
+
+	onDocumentKeyDown(e) {
+		if (!this.mounted || e.keyCode === 229) return;
+		switch (comboFor(e)) {
+			case 'down':
+				return this.onArrowDown(e);
+			case 'up':
+				return this.onArrowUp(e);
+			case 'enter':
+				return this.onEnter(e);
+			case 'alt+up':
+			case 'alt+down':
+				return this.onAltArrowUpOrDown(e);
+			case 'tab':
+				return this.onTab(e);
+			case 'shift+tab':
+				return this.onShiftTab(e);
+			default:
+		}
+	}
+
+	onArrowDown(e) {
+		this.isMouseMoveEnabled = false;
+		if (!this.shouldInterceptKeyEvent(e)) return;
+		const { isExpanded, activeRowIndex } = this.state;
+		if (isExpanded) e.preventDefault();
+		const next = this.getNextActiveRowIndex(activeRowIndex);
+		if (next === -1) {
+			this.clearActive(); // shouldWrap
+			return;
+		}
+		this.moveTo(next);
+	}
+
+	onArrowUp(e) {
+		this.isMouseMoveEnabled = false;
+		if (!this.shouldInterceptKeyEvent(e)) return;
+		const { isExpanded, activeRowIndex } = this.state;
+		if (isExpanded) e.preventDefault();
+		const prev = this.getPreviousActiveRowIndex(activeRowIndex);
+		if (prev === -1) {
+			this.clearActive(); // shouldWrap
+			return;
+		}
+		this.moveTo(prev);
+	}
+
+	getEffectiveActiveOption() {
+		const { activeRowIndex, pseudoActiveRowIndex } = this.state;
+		const index = activeRowIndex ?? pseudoActiveRowIndex;
+		return typeof index === 'number' ? this.getRows()[index] : undefined;
+	}
+
+	onEnter(e) {
+		if (!this.shouldInterceptKeyEvent(e)) return;
+		e.preventDefault();
+		const activeOption = this.getEffectiveActiveOption() || this.state.initialActiveOption;
+		if (activeOption && activeOption.isDisabled) return;
+		this.handleSelectionChange(activeOption);
+	}
+
+	onAltArrowUpOrDown(e) {
+		if (!this.shouldInterceptKeyEvent(e)) return;
+		if (!this.state.isExpanded) return;
+		e.stopPropagation();
+		e.preventDefault();
+		this.closeOptionsList(); // multiSelectMode only closes
+	}
+
+	onTab(e) {
+		if (!this.shouldInterceptKeyEvent(e)) return;
+		if (!this.state.isExpanded) return;
+		const activeOption = this.getEffectiveActiveOption();
+		if (this.host.advanceFocusOnTab) {
+			if (activeOption && !activeOption.isDisabled) {
+				this.handleSelectionChange(activeOption, { viaTab: true });
+			}
+			this.closeOptionsList();
+			return;
+		}
+		e.preventDefault();
+		this.handleSelectionChange(activeOption);
+	}
+
+	onShiftTab(e) {
+		if (!this.shouldInterceptKeyEvent(e)) return;
+		if (this.state.isExpanded) this.closeOptionsList();
+	}
+
+	/* ---------- mouse ---------- */
+
+	onMouseEnteredOption(index) {
+		if (!this.isMouseMoveEnabled) return;
+		const option = this.getRows()[index];
+		this.host.setSelectState({
+			activeRowIndex: option?.isDisabled ? undefined : index,
+			pseudoActiveRowIndex: undefined,
+		});
+	}
+
+	onMouseLeftOption() {
+		if (!this.isMouseMoveEnabled) return;
+		this.clearActive();
+	}
+
+	onOptionClicked(option) {
+		this.handleSelectionChange(option, { isOptionClicked: !option?.isDisabled });
+	}
+
+	/* ---------- selection ---------- */
+
+	handleSelectionChange(option, { isOptionClicked = false, viaTab = false } = {}) {
+		if (!option || option.isDisabled) return;
+		const { selectedOptions } = this.state;
+		const isSelected = this.isOptionSelected(option);
+		if (!isSelected && selectedOptions) {
+			this.host.setSelectState(
+				{
+					selectedOptions: [...selectedOptions, option],
+					activeRowIndex: undefined,
+					pseudoActiveRowIndex: undefined,
+					filterQuery: '',
+					isExpanded: false,
+				},
+				() => this.host.onSelectionChange?.(option, isOptionClicked, viaTab),
+			);
+		}
+		// shouldAllowUnselectInMultiSelectMode is off, so re-choosing a selected option does nothing
+		this.host.inputEl()?.focus();
+	}
+
+	closeOptionsList() {
+		this.host.onOptionsListClose?.();
+		this.host.setSelectState({
+			isExpanded: false,
+			activeRowIndex: undefined,
+			pseudoActiveRowIndex: undefined,
+			...(this.host.persistFilterQueryOnClose ? {} : { filterQuery: '' }),
+		});
+	}
+
+	/* ---------- popover overlay (click away) ---------- */
+
+	onOverlayMouseDown(e) {
+		this.overlayMouseDownTarget = e.target;
+	}
+
+	onOverlayClick(e) {
+		// ReactModal only requests close for a press that started and ended on the overlay itself
+		const startedOnOverlay = this.overlayMouseDownTarget === this.portal?.overlay;
+		this.overlayMouseDownTarget = null;
+		if (!this.portal || e.target !== this.portal.overlay || !startedOnOverlay) return;
+		if (!this.state.isExpanded) return;
+		const region = this.host.clickRegionEl();
+		let clickedInput;
+		if (region) {
+			const rect = region.getBoundingClientRect();
+			clickedInput =
+				e.clientX > rect.left && e.clientX < rect.right && e.clientY > rect.top && e.clientY < rect.bottom;
+		}
+		this.host.inputEl()?.focus();
+		this.host.onOptionsListClose?.(clickedInput);
+		this.host.setSelectState({
+			isExpanded: false,
+			activeRowIndex: undefined,
+			...(this.host.persistFilterQueryOnClose ? {} : { filterQuery: '' }),
+		});
+	}
+}
+
+/* ==========================================================================
+   Markup shared by both previews
+   ========================================================================== */
+
+const CLOSE_SVG =
+	'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" data-sk-icon="true" data-qa="close" aria-hidden="true" class=""><path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M16.53 3.47a.75.75 0 0 1 0 1.06L11.06 10l5.47 5.47a.75.75 0 0 1-1.06 1.06L10 11.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L8.94 10 3.47 4.53a.75.75 0 0 1 1.06-1.06L10 8.94l5.47-5.47a.75.75 0 0 1 1.06 0"/></svg>';
+
+const WARNING_SVG =
+	'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" data-sk-icon="true" data-qa="warning" aria-hidden="true" class="is-inline"><g fill="currentColor"><path d="M10 12.75a1 1 0 1 1 0 2 1 1 0 0 1 0-2m0-6a.75.75 0 0 1 .75.75V11a.75.75 0 0 1-1.5 0V7.5a.75.75 0 0 1 .75-.75"/><path fill-rule="evenodd" clip-rule="evenodd" d="M7.712 3.542c1.02-1.723 3.556-1.723 4.576 0l6.1 10.303c1.043 1.761-.28 3.905-2.287 3.905H3.899c-2.007 0-3.33-2.144-2.288-3.905zm3.285.765c-.44-.742-1.554-.742-1.994 0l-6.1 10.302c-.418.704.084 1.641.996 1.641h12.202c.912 0 1.414-.937.997-1.642z"/></g></svg>';
+
+const CHECK_SMALL_SVG =
+	'<svg class="c-select_options_list__selected-svg" aria-hidden="true" viewBox="0 0 2000 2000" width="15" height="15" fill="currentColor"><path d="M809 1450C832 1450 852 1440 866 1423L1478 699C1489 686 1495 671 1495 652C1495 629 1486 609 1468 594C1453 582 1439 577 1419 577C1396 577 1376 586 1363 603L816 1252L641 1004C627 984 606 973 580 973C563 973 550 977 536 986C515 999 505 1021 505 1046C505 1062 509 1076 519 1091L747 1417C763 1438 783 1450 809 1450Z"/></svg>';
+
+const KEYBOARD_KEY_ENTER_HTML =
+	'<div aria-hidden="true" aria-label="enter" class="sk-kbd sk-kbd--slim sk-kbd--flush" role="img">Enter</div>';
+
+// FieldErrors -> InlineAlert. The message also goes to the assertive announcer, like AsAnnouncerAPIMessage.
+function renderFieldErrorHtml({ id, message }) {
+	return `<div data-qa="error" class="c-inline_alert c-field_input__helpers" id="${escapeHtml(id)}">${WARNING_SVG}&nbsp;<div style="display: contents;">${escapeHtml(message)}</div></div>`;
+}
+const announcedErrors = new Set();
+function announceErrors(errors) {
+	(errors || []).forEach(({ id, message }) => {
+		const key = `${id}:${message}`;
+		if (announcedErrors.has(key)) return;
+		announcedErrors.add(key);
+		announcer.send({ message, assertive: true });
+	});
+	if (!errors?.length) announcedErrors.clear();
+}
+
+// Plain-label Token (js/modern/slack-kit/token/token.tsx renderPlainToken)
+function renderTokenHtml(option, { extraClass = '', removeClass, isDisabled, tokenAttrs = '', removeAttrs = '' }) {
+	const classes = ['c-token', extraClass, 'c-token--large', isDisabled && 'c-token--disabled'].filter(Boolean).join(' ');
+	return `<span class="${classes}" data-qa="multi_select_token_wrapper"${tokenAttrs} contenteditable="false"><span class="c-token__content" data-qa="token_content"><span class="c-token_content__inner"><span class="c-truncate c-truncate--break_words" style="--lines: 1; word-break: break-all;" data-sk="tooltip_parent"><span class="c-token_content__label" data-qa="token_plain_label">${escapeHtml(option.label)}</span></span><span hidden data-sk="tooltip"></span></span></span>${
+		isDisabled ? '' : `<span class="${removeClass}" data-qa="token_remove_icon"${removeAttrs}>${CLOSE_SVG}</span>`
+	}</span>`;
+}
+
+function renderModalHtml({ titleId, checkboxId, descriptionId }) {
+	return `
+<div class="ReactModal__Overlay c-sk-overlay" style="padding: 28px;">
+	<div class="ReactModal__Content ReactModal__Content--after-open c-sk-modal c-sk-modal--fixed c-sk-modal--responsive" tabindex="-1" role="dialog" aria-labelledby="${titleId}" aria-modal="true">
+		<div class="c-sk-modal_header ">
+			<div id="${titleId}" class="c-sk-modal_title_bar c-sk-modal_title_bar--close_button_visible">
+				<div class="c-sk-modal_title_bar__text "><h1 class="">${escapeHtml(MODAL_TITLE)}</h1></div>
+			</div>
+		</div>
+		<div data-qa="sk-modal-content" class="c-sk-modal_content">
+			<div role="presentation" class="c-scrollbar c-scrollbar--hidden c-scrollbar--inherit_size">
+				<div data-qa="slack_kit_scrollbar" role="presentation" class="c-scrollbar__hider">
+					<div role="presentation" class="c-scrollbar__child">
+						<div class="c-sk-modal_content__inner" data-qa="modal-content-inner">
+							<div class="c-sk-modal_content_section ">
+								<label for="${checkboxId}" class="c-label c-label--inline c-label--pointer" data-qa-label="true" data-qa-label-type="inline"><span class="c-label__text" data-qa-label-text="true">${escapeHtml(SHOW_TRANSLATE_BUTTON_LABEL)}</span><span class="c-label__children" data-qa-label-children="true"><input id="${checkboxId}" name="${checkboxId}" type="checkbox" class="c-input_checkbox" checked></span></label>
+							</div>
+							<div class="c-sk-modal_content_section ">
+								<div class="padding_top_100 margin_bottom_50">
+									<div data-select-mount></div>
+									<p id="${descriptionId}" class="sk_foreground_max">${escapeHtml(LANGUAGES_DESCRIPTION)}</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div role="presentation" class="c-scrollbar__track"><div role="presentation" class="c-scrollbar__bar" tabindex="-1" style="height: 0px; transform: translateY(0px);"></div></div>
+			</div>
+		</div>
+		<div class="c-sk-modal_footer">
+			<div class="c-sk-modal_footer_actions">
+				<button class="c-button c-button--outline c-button--medium" type="button" data-qa="cancel_button">${escapeHtml(CANCEL_LABEL)}</button>
+				<button class="c-button c-button--primary c-button--medium" type="button" data-qa="submit_button">${escapeHtml(SUBMIT_LABEL)}</button>
+			</div>
+		</div>
+		<button class="c-button-unstyled c-icon_button c-icon_button--size_medium c-sk-modal__close_button c-icon_button--default" aria-label="Close" data-qa="sk_close_modal_button" type="button">${CLOSE_SVG}</button>
+	</div>
+</div>`;
+}
+
+/* FocusEventManager: whether the user is driving the page with the keyboard. Buttons and the
+   checkbox show their focus rings only in keyboard mode; v1 also uses it to select all tokens. */
+const KEYBOARD_NAVIGATION_KEYS = ['Tab', 'F6', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+const keyboardMode = (() => {
+	const mode = { value: false, relatedEvent: null, listeners: new Set() };
+	const isInputElement = (el) =>
+		el.nodeName === 'INPUT' || el.nodeName === 'SELECT' || el.nodeName === 'TEXTAREA' || el.isContentEditable;
+	const syncFocusVisibleClasses = () => {
+		document.querySelectorAll('.c-button, .c-icon_button').forEach((el) => {
+			el.classList.toggle('c-button--focus-visible', mode.value);
+		});
+		document.querySelectorAll('.c-input_checkbox').forEach((el) => {
+			el.classList.toggle('c-input_checkbox--focus-visible', mode.value);
+		});
+	};
+	const setValue = (value) => {
+		if (value === mode.value) return;
+		mode.value = value;
+		syncFocusVisibleClasses();
+		mode.listeners.forEach((listener) => listener(value));
+	};
+	mode.sync = syncFocusVisibleClasses;
+	document.addEventListener('keydown', ({ type, key, shiftKey }) => {
+		mode.relatedEvent = { type, key, shiftKey };
+	}, true);
+	document.addEventListener('mousedown', ({ type, ctrlKey }) => {
+		if (isMac() && mode.value && ctrlKey) return;
+		mode.relatedEvent = { type };
+		setValue(false);
+	}, true);
+	document.addEventListener('focus', ({ target }) => {
+		const { relatedEvent } = mode;
+		const isKbNavEvent = relatedEvent?.type === 'keydown' && KEYBOARD_NAVIGATION_KEYS.includes(relatedEvent.key);
+		if (relatedEvent?.type === 'keydown' && mode.value) return;
+		if (target instanceof Element && isInputElement(target)) return;
+		const next = isKbNavEvent || (mode.value && !relatedEvent);
+		mode.relatedEvent = null;
+		setValue(next);
+	}, true);
+	window.addEventListener('blur', () => {
+		mode.relatedEvent = null;
+	});
+	return mode;
+})();
+
+/* ==========================================================================
+   MultiSelectV2 (uncontrolled MultiSelectV2 -> ControlledMultiSelectV2) port
+   ========================================================================== */
+
+const LAST_TOKEN = Number.POSITIVE_INFINITY;
+const MODIFIER_KEYS = new Set(['Alt', 'Control', 'Meta', 'Shift']);
+const CARET_KEYS = new Set(['ArrowLeft', 'ArrowRight', 'Home', 'End']);
+const MAC_CARET_LETTERS = new Set(['a', 'e', 'b', 'f']);
+
+const getTokenIdentities = (options) => options.map(({ key, value }) => key ?? value);
+const sameIdentities = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+
+const isCaretAtInputStart = (input) => {
+	if (!input.textContent) return true;
+	const selection = input.ownerDocument.getSelection();
+	if (!selection?.rangeCount) return false;
+	const range = selection.getRangeAt(0);
+	if (!range.collapsed || !input.contains(range.startContainer)) return false;
+	const textBeforeCaret = range.cloneRange();
+	textBeforeCaret.selectNodeContents(input);
+	textBeforeCaret.setEnd(range.startContainer, range.startOffset);
+	return textBeforeCaret.toString().length === 0;
+};
+
+const getJumpTarget = ({ key, altKey, ctrlKey, metaKey, shiftKey }) => {
+	if (altKey || shiftKey) return undefined;
+	const mac = isMac();
+	const isOnlyJumpModifier = mac ? metaKey && !ctrlKey : ctrlKey && !metaKey;
+	if (!isOnlyJumpModifier) return undefined;
+	const [firstTokenKey, inputEndKey] = mac ? ['ArrowUp', 'ArrowDown'] : ['Home', 'End'];
+	if (key === firstTokenKey) return 'firstToken';
+	if (key === inputEndKey) return 'inputEnd';
+	return undefined;
+};
+
+const isLetterChord = (letter) => ({ key, code, altKey, ctrlKey, metaKey, shiftKey }) => {
+	if (altKey || shiftKey) return false;
+	const isKey = /^[a-z]$/i.test(key) ? key.toLowerCase() === letter : code === `Key${letter.toUpperCase()}`;
+	if (!isKey) return false;
+	return isMac() ? metaKey && !ctrlKey : ctrlKey && !metaKey;
+};
+const isSelectAllChord = isLetterChord('a');
+const isUndoChord = isLetterChord('z');
+
+const isMacCaretChord = ({ key, altKey, ctrlKey, metaKey }) =>
+	isMac() && ctrlKey && !metaKey && !altKey && MAC_CARET_LETTERS.has(key.toLowerCase());
+
+const isTypedCharacter = (e) => isPrintableKeyEvent(e) && !(e.altKey && !isMac());
+
+const getNextSelectAllScope = ({ scope, focusedScope, hasFocusedContent, hasOtherContent }) => {
+	if (scope === undefined && hasFocusedContent) return focusedScope;
+	return hasOtherContent ? 'all' : scope;
+};
+
+const pluralItems = (count) => `${count} ${count === 1 ? 'item' : 'items'}`;
+
+// CSS-module classes from multi-select-v2.module.less (hashed in the real build)
+const V2_CLASSES = {
+	inputContainer: 'ms2-inputContainer',
+	largeInputContainer: 'ms2-largeInputContainer',
+	disabledInputContainer: 'ms2-disabledInputContainer',
+	invalidInputContainer: 'ms2-invalidInputContainer',
+	tokensListbox: 'ms2-tokensListbox',
+	tokenOption: 'ms2-tokenOption',
+	activeTokenOption: 'ms2-activeTokenOption',
+	tokenOptionDisabled: 'ms2-tokenOptionDisabled',
+	inputWrapper: 'ms2-inputWrapper',
+	input: 'ms2-input',
+	removeToken: 'ms2-removeToken',
+	removeTokenSelected: 'ms2-removeTokenSelected',
+	fieldErrors: 'ms2-fieldErrors',
+};
+
+const renderV2TokenHtml = (option, { isDisabled }) =>
+	renderTokenHtml(option, {
+		extraClass: '',
+		removeClass: V2_CLASSES.removeToken,
+		isDisabled,
+		removeAttrs: ' aria-hidden="true"',
+	}).replace('class="c-token c-token--large', 'class="c-token c-token--large c-token--noMargin');
+
+const setV2TokenSelected = (wrapper, isSelected) => {
+	wrapper.querySelector('.c-token')?.classList.toggle('c-token--selected', isSelected);
+	wrapper.querySelector('[data-qa="token_remove_icon"]')?.classList.toggle(V2_CLASSES.removeTokenSelected, isSelected);
+};
+
+function createMultiSelectV2(mountEl, props) {
+	const {
+		selectId,
+		ariaLabel,
+		ariaDescribedBy,
+		placeholder,
+		options,
+		initialSelectedOptions,
+		onSelectedItemsChange,
+	} = props;
+
+	// Controlled props supplied by the modal on every render
+	let isDisabled = !!props.isDisabled;
+	let errors = props.errors;
+
+	const store = createStore(
+		{
+			selectedOptions: initialSelectedOptions,
+			filterQuery: '',
+			isExpanded: false,
+			activeRowIndex: undefined,
+			pseudoActiveRowIndex: undefined,
+			initialActiveOption: undefined,
+			// useMultiSelectKeyboardNav
+			storedActiveIndex: LAST_TOKEN,
+			isTokensListboxFocused: false,
+			selectAll: undefined,
+		},
+		(prev, next) => commit(prev, next),
+	);
+	const { batched } = store;
+
+	const undo = { current: null };
+	const pendingOvertype = { current: false };
+	const savedComboboxRange = { current: null };
+
+	/* ---------- DOM ---------- */
+	const root = document.createElement('div');
+	root.id = selectId;
+	root.innerHTML = `
+		<div role="none" class="${V2_CLASSES.inputContainer} ${V2_CLASSES.largeInputContainer}" style="width: 100%;" data-qa="multi_select_v2_container">
+			<div class="${V2_CLASSES.inputWrapper}">
+				<div id="${buddyId(selectId, 'input')}" role="combobox" tabindex="0" class="${V2_CLASSES.input}" aria-multiline="false" aria-autocomplete="list"></div>
+			</div>
+		</div>
+		<div class="${V2_CLASSES.fieldErrors}"></div>
+		<div id="${buddyId(selectId, 'manage_tokens_hint')}" hidden>Shift tab to manage items</div>`;
+	mountEl.appendChild(root);
+	const container = root.firstElementChild;
+	const inputWrapper = container.querySelector(`.${V2_CLASSES.inputWrapper}`);
+	const combobox = container.querySelector('[role="combobox"]');
+	const errorsEl = root.querySelector(`.${V2_CLASSES.fieldErrors}`);
+	const manageTokensHintEl = root.lastElementChild;
+	let tokensListbox = null;
+	let tokensKey = null;
+	let tokenEls = [];
+
+	/* ---------- derived values (read from committed state) ---------- */
+	const s = () => store.get();
+	const getComboboxText = () => combobox.textContent ?? '';
+	const hasComboboxText = () => !!getComboboxText();
+	const hasValidErrors = () => !!errors?.length;
+	const isSelectInvalid = () => hasValidErrors();
+	const lastIndex = () => s().selectedOptions.length - 1;
+	const activeIndex = () => {
+		const { selectedOptions, storedActiveIndex } = s();
+		return selectedOptions.length ? Math.min(storedActiveIndex, selectedOptions.length - 1) : 0;
+	};
+	const isSelectAllCurrent = (state = s()) =>
+		!isDisabled &&
+		state.selectAll !== undefined &&
+		sameIdentities(state.selectAll.identities, getTokenIdentities(state.selectedOptions));
+	const selectAllScope = () => (isSelectAllCurrent() ? s().selectAll.scope : undefined);
+	const areAllTokensSelected = () => ['tokens', 'all'].includes(selectAllScope());
+	const hasRemovableTokens = () => !isDisabled && s().selectedOptions.some((o) => !o.isDisabled);
+	const hasUnselectedRemovableTokens = () =>
+		!isDisabled && s().selectedOptions.some((o, i) => !o.isDisabled && i !== activeIndex());
+	const filteredOptions = (state = s()) => defaultFilter(options, state.filterQuery);
+
+	/* ---------- state helpers ---------- */
+	const LIST_KEYS = ['filterQuery', 'isExpanded', 'activeRowIndex', 'pseudoActiveRowIndex', 'initialActiveOption'];
+	const updateListState = (changes) => {
+		const next = {};
+		LIST_KEYS.forEach((k) => {
+			if (k in changes) next[k] = changes[k];
+		});
+		store.set((state) => {
+			const merged = { ...state, ...next };
+			if (merged.isExpanded === false) {
+				next.activeRowIndex = undefined;
+				next.pseudoActiveRowIndex = undefined;
+				next.initialActiveOption = undefined;
+			}
+			return next;
+		});
+	};
+
+	const setSelectedOptions = (nextSelectedOptions) => {
+		store.set({ selectedOptions: nextSelectedOptions });
+		onSelectedItemsChange?.(nextSelectedOptions);
+	};
+
+	const setSelectState = (changes, callback) => {
+		if (changes) {
+			const { selectedOptions: nextSelectedOptions, ...listChanges } = changes;
+			updateListState(listChanges);
+			if (nextSelectedOptions && !sameOptions(nextSelectedOptions, s().selectedOptions)) {
+				setSelectedOptions(nextSelectedOptions);
+			}
+		}
+		callback?.();
+	};
+	const sameOptions = (a, b) =>
+		a.length === b.length && a.every((o, i) => o.value === b[i].value && o.label === b[i].label);
+
+	/* ---------- focus & text ---------- */
+	const focusCombobox = (caretAt) => {
+		combobox.focus();
+		if (!caretAt) return;
+		const offset = caretAt === 'start' ? 0 : combobox.childNodes.length;
+		combobox.ownerDocument.getSelection()?.collapse(combobox, offset);
+	};
+	const clearComboboxText = () => {
+		combobox.textContent = '';
+	};
+	const restoreComboboxRange = () => {
+		const range = savedComboboxRange.current;
+		const selection = combobox.ownerDocument.getSelection();
+		if (!range || !selection) return;
+		combobox.focus();
+		selection.removeAllRanges();
+		selection.addRange(range);
+	};
+	const focusTokens = () => {
+		updateListState({ isExpanded: false });
+		tokensListbox?.focus();
+	};
+
+	/* ---------- token edits ---------- */
+	const recordUndoSnapshot = (resultOptions) => {
+		undo.current = {
+			selectionToRestore: s().selectedOptions,
+			tokensAfterLastRemoval: getTokenIdentities(resultOptions),
+		};
+	};
+
+	const handleRemoveToken = (index) => {
+		const { selectedOptions } = s();
+		const option = selectedOptions[index];
+		if (isDisabled || !option || option.isDisabled) return;
+		const next = selectedOptions.filter((_o, i) => i !== index);
+		recordUndoSnapshot(next);
+		setSelectedOptions(next);
+		if (option.label) announcer.send({ message: `${option.label} removed` });
+	};
+
+	const handleOptionSelected = (option, _isOptionClicked, viaTab = false) => {
+		clearComboboxText();
+		if (option.label) {
+			announcer.send({ message: viaTab ? `${option.label} added to ${ariaLabel}` : `${option.label} added` });
+		}
+	};
+
+	const handleRemoveAllTokens = () => {
+		if (isDisabled) return;
+		const { selectedOptions } = s();
+		const removed = selectedOptions.filter((o) => !o.isDisabled);
+		if (!removed.length) return;
+		const next = selectedOptions.filter((o) => o.isDisabled);
+		recordUndoSnapshot(next);
+		setSelectedOptions(next);
+		const [first] = removed;
+		announcer.send({
+			message: removed.length === 1 && first?.label ? `${first.label} removed` : `${pluralItems(removed.length)} removed`,
+		});
+	};
+
+	const handleSelectAllAdvance = ({ added, focusedScope, canExtend }) => {
+		if (added === 'query') {
+			announcer.send({ message: `${getComboboxText()} selected`, assertive: focusedScope === 'query' });
+			if (canExtend) announcer.send({ message: 'Press again to also select items' });
+			return;
+		}
+		const removable = s().selectedOptions.filter((o) => !o.isDisabled);
+		const [first] = removable;
+		const base = removable.length === 1 && first?.label ? `${first.label} selected` : `${pluralItems(removable.length)} selected`;
+		announcer.send({ message: canExtend ? `${base}. Press again to also select search query` : base });
+	};
+
+	const handleClearInput = () => {
+		clearComboboxText();
+		updateListState({ filterQuery: '', isExpanded: false });
+	};
+
+	const handleClearAll = () => {
+		if (isDisabled) return;
+		handleRemoveAllTokens();
+		clearComboboxText();
+		updateListState({ filterQuery: '', isExpanded: false });
+	};
+
+	const handleUndo = () => {
+		if (isDisabled) return false;
+		const record = undo.current;
+		undo.current = null;
+		const { selectedOptions } = s();
+		if (!record || !sameIdentities(record.tokensAfterLastRemoval, getTokenIdentities(selectedOptions))) {
+			return false;
+		}
+		const remaining = new Set(record.tokensAfterLastRemoval);
+		const restoreIdentities = getTokenIdentities(record.selectionToRestore);
+		const restored = record.selectionToRestore.filter((_o, i) => !remaining.has(restoreIdentities[i]));
+		setSelectedOptions(record.selectionToRestore);
+		const [first] = restored;
+		announcer.send({
+			message:
+				restored.length === 1 && first?.label
+					? `Restored ${first.label}`
+					: `Restored ${pluralItems(restored.length)}`,
+		});
+		return true;
+	};
+
+	const handleTokenOvertype = () => {
+		pendingOvertype.current = true;
+	};
+
+	const handleOptionsListClose = (clickedInput) => {
+		if (clickedInput === false) {
+			handleClearInput();
+			combobox.blur();
+		} else if (clickedInput === true) {
+			restoreComboboxRange();
+		}
+	};
+
+	const handleOptionsListCollapse = () => updateListState({ isExpanded: false });
+
+	const handleFilterQueryChange = (query) => {
+		updateListState({ filterQuery: query, isExpanded: query.length > 0 });
+		if (pendingOvertype.current) pendingOvertype.current = false;
+		else undo.current = null;
+	};
+
+	const handleOptionsListExpand = (position) => {
+		const rows = filteredOptions();
+		const initialActiveOption = position === 'first' ? rows[0] : rows[rows.length - 1];
+		updateListState({ isExpanded: true, initialActiveOption });
+	};
+
+	const handleMoveVirtualFocusToCombobox = () => {
+		if (typeof s().activeRowIndex === 'number') optionsList.clearActive();
+	};
+
+	/* ---------- keyboard nav (useMultiSelectKeyboardNav) ---------- */
+	const setStoredActiveIndex = (update) =>
+		store.set((state) => ({
+			storedActiveIndex: typeof update === 'function' ? update(state.storedActiveIndex) : update,
+		}));
+	const setSelectAll = (value) => store.set({ selectAll: value });
+	const endSelectAll = () => setSelectAll(undefined);
+
+	const advanceSelectAll = (focusedScope) => {
+		const scope = selectAllScope();
+		const hasSelectableQuery = !isDisabled && hasComboboxText();
+		const otherScope = focusedScope === 'tokens' ? 'query' : 'tokens';
+		const hasOtherContent = focusedScope === 'tokens' ? hasSelectableQuery : hasRemovableTokens();
+		const nextScope = getNextSelectAllScope({
+			scope,
+			focusedScope,
+			hasFocusedContent: focusedScope === 'tokens' ? hasUnselectedRemovableTokens() : hasSelectableQuery,
+			hasOtherContent,
+		});
+		if (nextScope && nextScope !== scope) {
+			setSelectAll({ scope: nextScope, identities: getTokenIdentities(s().selectedOptions) });
+			handleSelectAllAdvance({
+				added: nextScope === 'all' ? otherScope : focusedScope,
+				focusedScope,
+				canExtend: nextScope !== 'all' && hasOtherContent,
+			});
+		}
+	};
+
+	const onTokensKeyDown = (e) => {
+		const { selectedOptions } = s();
+		const scope = selectAllScope();
+		const idx = activeIndex();
+		const last = lastIndex();
+		if (isUndoChord(e)) {
+			if (handleUndo()) {
+				e.preventDefault();
+				e.stopPropagation();
+			}
+			return;
+		}
+		if (isSelectAllChord(e)) {
+			e.preventDefault();
+			advanceSelectAll('tokens');
+			return;
+		}
+		if (scope && !MODIFIER_KEYS.has(e.key)) {
+			setSelectAll(undefined);
+			if (e.key === 'Backspace' || e.key === 'Delete') {
+				e.preventDefault();
+				if (scope === 'all') handleClearAll();
+				else handleRemoveAllTokens();
+				if (selectedOptions.some((o) => o.isDisabled)) setStoredActiveIndex(LAST_TOKEN);
+				else focusCombobox();
+				return;
+			}
+			if (isTypedCharacter(e)) {
+				e.stopPropagation();
+				handleTokenOvertype();
+				if (scope === 'all') {
+					handleClearAll();
+					focusCombobox();
+				} else {
+					handleRemoveAllTokens();
+					focusCombobox('start');
+				}
+				return;
+			}
+		}
+		const jumpTarget = getJumpTarget(e);
+		if (jumpTarget === 'inputEnd') {
+			e.preventDefault();
+			focusCombobox('end');
+			return;
+		}
+		if (e.key === 'Home' || jumpTarget === 'firstToken') {
+			e.preventDefault();
+			setStoredActiveIndex(0);
+			return;
+		}
+		if (e.key === 'End') {
+			e.preventDefault();
+			setStoredActiveIndex(last);
+			return;
+		}
+		if (e.key === 'ArrowRight' && idx === last) {
+			e.preventDefault();
+			focusCombobox('start');
+			return;
+		}
+		if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+			e.preventDefault();
+			setStoredActiveIndex((i) => Math.max(0, Math.min(i, last) - 1));
+			return;
+		}
+		if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+			e.preventDefault();
+			setStoredActiveIndex((i) => Math.min(last, Math.min(i, last) + 1));
+			return;
+		}
+		if (isDisabled || selectedOptions[idx]?.isDisabled) {
+			if (isTypedCharacter(e)) e.stopPropagation();
+			return;
+		}
+		if (isTypedCharacter(e)) {
+			e.stopPropagation();
+			handleTokenOvertype();
+			handleRemoveToken(idx);
+			focusCombobox('start');
+			return;
+		}
+		if (e.key === 'Backspace') {
+			e.preventDefault();
+			handleRemoveToken(idx);
+			if (selectedOptions.length === 1) focusCombobox();
+			else setStoredActiveIndex(Math.max(0, idx - 1));
+			return;
+		}
+		if (e.key === 'Delete') {
+			e.preventDefault();
+			handleRemoveToken(idx);
+			if (selectedOptions.length === 1) focusCombobox();
+		}
+	};
+
+	const onComboboxKeyDown = (e) => {
+		const { key, currentTarget } = e;
+		if (e.isComposing) return;
+		const { isExpanded } = listView();
+		const scope = selectAllScope();
+		const selectedOptionsLength = s().selectedOptions.length;
+		if (isUndoChord(e)) {
+			if (handleUndo()) {
+				e.preventDefault();
+				e.stopPropagation();
+			}
+			return;
+		}
+		if (isSelectAllChord(e)) {
+			if (isExpanded) handleMoveVirtualFocusToCombobox();
+			advanceSelectAll('query');
+			return;
+		}
+		if (scope && !MODIFIER_KEYS.has(key)) {
+			setSelectAll(undefined);
+			if (scope === 'all' && (key === 'Backspace' || key === 'Delete')) {
+				e.preventDefault();
+				handleClearAll();
+				return;
+			}
+			if (scope === 'all' && isTypedCharacter(e)) {
+				handleTokenOvertype();
+				handleRemoveAllTokens();
+				return;
+			}
+		}
+		const jumpTarget = getJumpTarget(e);
+		const shouldMoveVirtualFocusToCombobox =
+			CARET_KEYS.has(key) || isMacCaretChord(e) || jumpTarget !== undefined || isTypedCharacter(e);
+		if (isExpanded && shouldMoveVirtualFocusToCombobox) handleMoveVirtualFocusToCombobox();
+		if (key === 'Enter') {
+			e.preventDefault();
+			return;
+		}
+		const shouldOpenOptionsList =
+			!e.ctrlKey &&
+			!e.metaKey &&
+			!e.shiftKey &&
+			(key === 'ArrowDown' || (e.altKey && key === 'ArrowUp')) &&
+			!isExpanded &&
+			!isDisabled;
+		if (shouldOpenOptionsList) {
+			e.preventDefault();
+			e.stopPropagation();
+			handleOptionsListExpand(key === 'ArrowDown' ? 'first' : 'last');
+			return;
+		}
+		if (key === 'Escape') {
+			if (isExpanded) {
+				e.preventDefault();
+				e.stopPropagation();
+				handleOptionsListCollapse();
+			}
+			return;
+		}
+		if (jumpTarget === 'inputEnd') {
+			e.preventDefault();
+			focusCombobox('end');
+			return;
+		}
+		if (jumpTarget === 'firstToken' && selectedOptionsLength) {
+			e.preventDefault();
+			setStoredActiveIndex(0);
+			focusTokens();
+			return;
+		}
+		if (key !== 'ArrowLeft' && key !== 'Backspace') return;
+		if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+		if (!selectedOptionsLength) return;
+		if (!isCaretAtInputStart(currentTarget)) return;
+		if (key === 'Backspace' && isDisabled) return;
+		e.preventDefault();
+		focusTokens();
+	};
+
+	/* ---------- options list ---------- */
+	// The options list sees the list state merged with the controlled props, filtered by the query
+	const listView = (state = s()) => ({
+		isExpanded: !!state.isExpanded,
+		filterQuery: state.filterQuery,
+		options: filteredOptions(state),
+		selectedOptions: state.selectedOptions,
+		activeRowIndex: state.activeRowIndex,
+		pseudoActiveRowIndex: state.pseudoActiveRowIndex,
+		initialActiveOption: state.initialActiveOption,
+	});
+
+	const optionsList = new OptionsList(
+		{
+			selectId,
+			getState: () => listView(),
+			setSelectState,
+			inputEl: () => combobox,
+			clickRegionEl: () => container,
+			sizingEl: () => container,
+			xAnchorEl: () => combobox,
+			persistFilterQueryOnClose: true,
+			advanceFocusOnTab: true,
+			onSelectionChange: handleOptionSelected,
+			onOptionsListClose: handleOptionsListClose,
+		},
+		batched,
+	);
+
+	/* ---------- events ---------- */
+	root.addEventListener(
+		'focusout',
+		batched((e) => {
+			if (e.target === combobox) {
+				const selection = combobox.ownerDocument.getSelection();
+				if (selection?.rangeCount) savedComboboxRange.current = selection.getRangeAt(0).cloneRange();
+			}
+			if (s().isExpanded) return;
+			if (container.contains(e.relatedTarget)) return;
+			handleClearInput();
+		}),
+	);
+	container.addEventListener(
+		'mousedown',
+		batched((e) => {
+			if (isDisabled || e.target !== e.currentTarget) return;
+			e.preventDefault();
+			focusCombobox();
+		}),
+	);
+	combobox.addEventListener('input', batched(() => handleFilterQueryChange(combobox.textContent ?? '')));
+	combobox.addEventListener('keydown', batched(onComboboxKeyDown));
+	combobox.addEventListener('blur', batched(endSelectAll));
+	combobox.addEventListener('mousedown', batched(endSelectAll));
+
+	/* ---------- render ---------- */
+	function normalizeState() {
+		const state = s();
+		if (isDisabled && state.isExpanded) updateListState({ isExpanded: false });
+		if (state.selectAll !== undefined && !isSelectAllCurrent(state)) store.set({ selectAll: undefined });
+		if (!state.selectedOptions.length && (state.isTokensListboxFocused || state.storedActiveIndex !== LAST_TOKEN)) {
+			store.set({ isTokensListboxFocused: false, storedActiveIndex: LAST_TOKEN });
+		}
+	}
+
+	function renderTokens() {
+		const { selectedOptions, isTokensListboxFocused } = s();
+		if (!selectedOptions.length) {
+			if (tokensListbox) {
+				tokensListbox.remove();
+				tokensListbox = null;
+				tokensKey = null;
+				tokenEls = [];
+			}
+			return;
+		}
+		if (!tokensListbox) {
+			tokensListbox = document.createElement('div');
+			tokensListbox.id = buddyId(selectId, 'tokens_listbox');
+			tokensListbox.dataset.qa = 'multi_select_v2_tokens';
+			tokensListbox.setAttribute('role', 'listbox');
+			tokensListbox.setAttribute('aria-label', 'Items');
+			tokensListbox.tabIndex = 0;
+			tokensListbox.className = V2_CLASSES.tokensListbox;
+			tokensListbox.addEventListener('keydown', batched(onTokensKeyDown));
+			tokensListbox.addEventListener('focusin', batched(() => store.set({ isTokensListboxFocused: true })));
+			tokensListbox.addEventListener(
+				'focusout',
+				batched(() => store.set({ isTokensListboxFocused: false, storedActiveIndex: LAST_TOKEN, selectAll: undefined })),
+			);
+			tokensListbox.addEventListener('mousedown', batched(endSelectAll));
+			container.insertBefore(tokensListbox, inputWrapper);
+		}
+		const idx = activeIndex();
+		const allSelected = areAllTokensSelected();
+		tokensListbox.setAttribute('aria-activedescendant', buddyId(selectId, `token_${idx}`));
+		if (isDisabled) tokensListbox.setAttribute('aria-disabled', 'true');
+		else tokensListbox.removeAttribute('aria-disabled');
+		if (isSelectInvalid()) tokensListbox.setAttribute('aria-invalid', 'true');
+		else tokensListbox.removeAttribute('aria-invalid');
+
+		const key = `${isDisabled}|${selectedOptions.map((o) => o.value).join('|')}`;
+		if (key !== tokensKey) {
+			tokensKey = key;
+			tokensListbox.textContent = '';
+			tokenEls = selectedOptions.map((option, index) => {
+				const wrapper = document.createElement('div');
+				wrapper.id = buddyId(selectId, `token_${index}`);
+				wrapper.setAttribute('role', 'option');
+				const isTokenDisabled = isDisabled || !!option.isDisabled;
+				if (isTokenDisabled) wrapper.setAttribute('aria-disabled', 'true');
+				wrapper.innerHTML = renderV2TokenHtml(option, { isDisabled: isTokenDisabled });
+				const token = wrapper.firstElementChild;
+				token.addEventListener('mousedown', batched(() => setStoredActiveIndex(index)));
+				const remove = wrapper.querySelector('[data-qa="token_remove_icon"]');
+				remove?.addEventListener(
+					'mousedown',
+					batched((e) => {
+						e.preventDefault();
+						e.stopPropagation();
+						handleRemoveToken(index);
+						focusCombobox();
+					}),
+				);
+				tokensListbox.appendChild(wrapper);
+				return wrapper;
+			});
+		}
+		selectedOptions.forEach((option, index) => {
+			const wrapper = tokenEls[index];
+			const isActive = index === idx && isTokensListboxFocused;
+			const isSelected = isActive || (allSelected && !isDisabled && !option.isDisabled);
+			const isTokenDisabled = isDisabled || !!option.isDisabled;
+			wrapper.setAttribute('aria-selected', String(isSelected));
+			wrapper.className = [
+				V2_CLASSES.tokenOption,
+				isActive && V2_CLASSES.activeTokenOption,
+				isTokenDisabled && V2_CLASSES.tokenOptionDisabled,
+			]
+				.filter(Boolean)
+				.join(' ');
+			setV2TokenSelected(wrapper, isSelected);
+		});
+	}
+
+	function render() {
+		const state = s();
+		const { selectedOptions } = state;
+		const view = listView(state);
+		const invalid = isSelectInvalid();
+
+		container.classList.toggle(V2_CLASSES.disabledInputContainer, isDisabled);
+		container.classList.toggle(V2_CLASSES.invalidInputContainer, invalid);
+
+		renderTokens();
+
+		// Combobox
+		const label =
+			selectedOptions.length === 0 ? ariaLabel : `${ariaLabel}, ${pluralItems(selectedOptions.length)}`;
+		const showPlaceholder = selectedOptions.length === 0 && !state.filterQuery;
+		combobox.setAttribute('contenteditable', isDisabled ? 'false' : 'plaintext-only');
+		setAttr(combobox, 'data-placeholder', showPlaceholder ? placeholder : null);
+		setAttr(combobox, 'aria-placeholder', showPlaceholder ? placeholder : null);
+		combobox.setAttribute('aria-label', label);
+		const interactive = view.isExpanded && !isDisabled;
+		combobox.setAttribute('aria-expanded', String(interactive));
+		setAttr(combobox, 'aria-controls', interactive ? buddyId(selectId, 'listbox') : null);
+		setAttr(
+			combobox,
+			'aria-activedescendant',
+			interactive && typeof state.activeRowIndex === 'number' ? buddyId(selectId, `option_${state.activeRowIndex}`) : null,
+		);
+		setAttr(combobox, 'aria-invalid', invalid ? 'true' : 'false');
+		setAttr(combobox, 'aria-disabled', isDisabled ? 'true' : 'false');
+		const describedBy = [
+			...(hasValidErrors() ? errors.map(({ id }) => id) : []),
+			ariaDescribedBy,
+			selectedOptions.length ? buddyId(selectId, 'manage_tokens_hint') : null,
+		].filter(Boolean);
+		setAttr(combobox, 'aria-describedby', describedBy.length ? describedBy.join(' ') : null);
+
+		// Errors + hint
+		const errorsHtml = hasValidErrors() ? errors.map((error) => renderFieldErrorHtml(error)).join('') : '';
+		if (errorsEl.__html !== errorsHtml) {
+			errorsEl.__html = errorsHtml;
+			errorsEl.innerHTML = errorsHtml;
+		}
+		manageTokensHintEl.hidden = true;
+		if (selectedOptions.length) manageTokensHintEl.removeAttribute('data-empty');
+
+		optionsList.update();
+	}
+
+	function commit() {
+		normalizeState();
+		render();
+	}
+
+	store.forceCommit();
+
+	return {
+		combobox,
+		setProps: batched((next) => {
+			isDisabled = !!next.isDisabled;
+			errors = next.errors;
+			store.forceCommit();
+		}),
+		destroy() {
+			optionsList.update = () => {};
+			if (optionsList.mounted) OptionsList.prototype.unmount.call(optionsList);
+			root.remove();
+		},
+	};
+}
+
+
+/* ==========================================================================
+   Preview modal (BaseModal + the language preview modal's form logic)
+   ========================================================================== */
+
+const MOCK_LOCALES = [
+	['Abkhazian', 'ab'], ['Afar', 'aa'], ['Afrikaans', 'af'], ['Akan', 'ak'], ['Albanian', 'sq'],
+	['Amharic', 'am'], ['Arabic', 'ar'], ['Armenian', 'hy'], ['Assamese', 'as'], ['Aymara', 'ay'],
+	['Azerbaijani', 'az'], ['Basque', 'eu'], ['Belarusian', 'be'], ['Bengali', 'bn'], ['Bihari', 'bh'],
+	['Bislama', 'bi'], ['Bosnian', 'bs'], ['Breton', 'br'], ['Bulgarian', 'bg'], ['Burmese', 'my'],
+	['Catalan', 'ca'], ['Cebuano', 'ceb'], ['Cherokee', 'chr'], ['Chinese (Simplified)', 'zh'],
+	['Chinese (Traditional)', 'zh-Hant'], ['Croatian', 'hr'], ['Czech', 'cs'], ['Danish', 'da'],
+	['Dutch', 'nl'], ['English', 'en'], ['English (UK)', 'en-GB', true], ['English (US)', 'en-US', true],
+	['Estonian', 'et'], ['Faroese', 'fo'], ['Fijian', 'fj'], ['Finnish', 'fi'], ['French', 'fr'],
+	['Frisian', 'fy'], ['Galician', 'gl'], ['Ganda', 'lg'], ['Georgian', 'ka'], ['German', 'de'],
+	['Greek', 'el'], ['Greenlandic', 'kl'], ['Guarani', 'gn'], ['Gujarati', 'gu'], ['Hausa', 'ha'],
+	['Hawaiian', 'haw'], ['Hebrew', 'he'], ['Hindi', 'hi'], ['Hmong', 'hmn'], ['Hungarian', 'hu'],
+	['Igbo', 'ig'], ['Indonesian', 'id'], ['Inuktitut', 'iu'], ['Inupiaq', 'ik'], ['Irish', 'ga'],
+	['Italian', 'it'], ['Japanese', 'ja'], ['Javanese', 'jv'], ['Kannada', 'kn'], ['Kazakh', 'kk'],
+	['Khasi', 'kha'], ['Khmer', 'km'], ['Kinyarwanda', 'rw'], ['Kirundi', 'rn'], ['Korean', 'ko'],
+	['Kurdish', 'ku'], ['Kyrgyz', 'ky'], ['Lao', 'lo'], ['Latvian', 'lv'], ['Limbu', 'li'],
+	['Lingala', 'ln'], ['Lithuanian', 'lt'], ['Macedonian', 'mk'], ['Malagasy', 'mg'], ['Malay', 'ms'],
+	['Malayalam', 'ml'], ['Maltese', 'mt'], ['Manx', 'gv'], ['Maori', 'mi'], ['Marathi', 'mr'],
+	['Mongolian', 'mn'], ['Nauru', 'na'], ['Nepali', 'ne'], ['Norwegian', 'no'], ['Nso', 'nso-ZA'],
+	['Nyanja', 'ny'], ['Occitan', 'oc'], ['Oriya', 'or'], ['Oromo', 'om'], ['Pashto', 'ps'],
+	['Persian', 'fa'], ['Polish', 'pl'], ['Portuguese', 'pt'], ['Portuguese (Brazil)', 'pt-BR', true],
+	['Portuguese (Portugal)', 'pt-PT', true], ['Punjabi', 'pa'], ['Quechua', 'qu'], ['Romanian', 'ro'],
+	['Romansh', 'rm'], ['Russian', 'ru'], ['Samoan', 'sm'], ['Sango', 'sg'], ['Serbian', 'sr'],
+	['Sesotho', 'st'], ['Setswana', 'tn'], ['Shona', 'sn'], ['Sindhi', 'sd'], ['Sinhalese', 'si'],
+	['Slovak', 'sk'], ['Slovenian', 'sl'], ['Somali', 'so'], ['South Ndebele', 'nr'], ['Spanish', 'es'],
+	['Spanish (Latin America)', 'es-LA', true], ['Spanish (Spain)', 'es-ES', true], ['Sundanese', 'su'],
+	['Swahili', 'sw'], ['Swati', 'ss'], ['Swedish', 'sv'], ['Syriac', 'syr'], ['Tagalog', 'tl'],
+	['Tajik', 'tg'], ['Tamil', 'ta'], ['Tatar', 'tt'], ['Telugu', 'te'], ['Thai', 'th'], ['Tongan', 'to'],
+	['Tsonga', 'ts'], ['Turkish', 'tr'], ['Turkmen', 'tk'], ['Uighur', 'ug'], ['Ukrainian', 'uk'],
+	['Urdu', 'ur'], ['Uzbek', 'uz'], ['Venda', 've'], ['Vietnamese', 'vi'], ['Waray', 'war'],
+	['Welsh', 'cy'], ['Wolof', 'wo'], ['Xhosa', 'xh'], ['Yiddish', 'yi'], ['Yoruba', 'yo'],
+	['Zapotec', 'zzp'], ['Zhuang', 'za'], ['Zulu', 'zu'],
+].map(([name, locale, exclude]) => ({ name, locale, exclude: !!exclude }));
+
+const PRESELECTED_LANGUAGE_CODES = ['en', 'fr', 'pt'];
+const LANGUAGES_LABEL = 'Translation languages (Version 2)';
+const LANGUAGES_DESCRIPTION = 'We’ll offer message translations in these languages';
+const SEARCH_PLACEHOLDER = 'Search to add languages';
+const MODAL_TITLE = 'Translation languages (Version 2)';
+const SHOW_TRANSLATE_BUTTON_LABEL = 'Show Translate button on messages';
+const CANCEL_LABEL = 'Cancel';
+const SUBMIT_LABEL = 'Submit';
+const MAX_LANGUAGES = 5;
+const MAX_LANGUAGES_ERROR = 'Maximum exceeded: please choose at most 5 languages.';
+
+const toOption = ({ name, locale }) => ({ label: name, value: locale });
+const LANGUAGE_OPTIONS = MOCK_LOCALES.filter((l) => !l.exclude).map(toOption);
+const getSelectedLanguageOptions = (codes) => MOCK_LOCALES.filter((l) => codes.includes(l.locale)).map(toOption);
+
+const FOCUSABLE_SELECTOR =
+	'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex], [contenteditable]';
+
+const isTabbable = (el) => {
+	if (el.closest('[hidden]') || el.getAttribute('tabindex') === '-1') return false;
+	if (el.isContentEditable === false && el.getAttribute('contenteditable') === 'false' && !el.hasAttribute('tabindex')) {
+		return false;
+	}
+	const rect = el.getBoundingClientRect();
+	return rect.width > 0 || rect.height > 0;
+};
+
+/**
+ * Opens the preview modal. `createSelect(mountEl, props)` builds the version-specific multi-select
+ * and returns { setProps, destroy, focus? }. `focusOnOpen(select)` lands initial focus.
+ */
+function openPreviewModal({ createSelect, focusOnOpen, onClosed }) {
+	const titleId = `modal_title_${uuid()}`;
+	const checkboxId = `show_translate_${uuid()}`;
+	const descriptionId = `languages_description_${uuid()}`;
+	const errorId = `${titleId}_error`;
+
+	let selectedLanguages = getSelectedLanguageOptions(PRESELECTED_LANGUAGE_CODES);
+	let showTranslateButton = true;
+	let showMaxError = false;
+
+	const portal = document.createElement('div');
+	portal.className = 'ReactModalPortal c-sk-modal_portal';
+	portal.innerHTML = renderModalHtml({ titleId, checkboxId, descriptionId });
+	document.body.appendChild(portal);
+
+	const overlay = portal.querySelector('.c-sk-overlay');
+	const content = portal.querySelector('.c-sk-modal');
+	const checkbox = portal.querySelector(`#${checkboxId}`);
+	const selectMount = portal.querySelector('[data-select-mount]');
+	const cancelButton = portal.querySelector('[data-qa="cancel_button"]');
+	const submitButton = portal.querySelector('[data-qa="submit_button"]');
+	const closeButton = portal.querySelector('[data-qa="sk_close_modal_button"]');
+
+	const getErrors = () => (showMaxError ? [{ id: errorId, message: MAX_LANGUAGES_ERROR }] : undefined);
+	const syncSelect = () => {
+		select.setProps({ isDisabled: !showTranslateButton, errors: getErrors() });
+		announceErrors(getErrors());
+	};
+
+	const select = createSelect(selectMount, {
+		selectId: 'languages_multi_select',
+		ariaLabel: LANGUAGES_LABEL,
+		ariaDescribedBy: descriptionId,
+		placeholder: SEARCH_PLACEHOLDER,
+		placeholderText: SEARCH_PLACEHOLDER,
+		options: LANGUAGE_OPTIONS,
+		initialSelectedOptions: getSelectedLanguageOptions(PRESELECTED_LANGUAGE_CODES),
+		isDisabled: false,
+		errors: undefined,
+		onSelectedItemsChange: (languages) => {
+			selectedLanguages = languages;
+			// Clear the error as soon as the selection is back within the limit
+			if (languages.length <= MAX_LANGUAGES && showMaxError) {
+				showMaxError = false;
+				syncSelect();
+			}
+		},
+	});
+
+	const close = () => {
+		document.removeEventListener('keydown', onDocumentKeyDownCapture, true);
+		scrollResizeObserver.disconnect();
+		select.destroy();
+		portal.remove();
+		onClosed?.();
+	};
+
+	checkbox.addEventListener('change', () => {
+		showTranslateButton = checkbox.checked;
+		// Hiding the Translate button disables the select, so drop any error
+		if (!showTranslateButton) showMaxError = false;
+		syncSelect();
+	});
+
+	submitButton.addEventListener('click', () => {
+		if (showTranslateButton && selectedLanguages.length > MAX_LANGUAGES) {
+			showMaxError = true;
+			syncSelect();
+			return;
+		}
+		close();
+	});
+	cancelButton.addEventListener('click', close);
+	closeButton.addEventListener('click', close);
+
+	// ReactModal: Escape on the dialog requests close unless something already handled it
+	content.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape' || e.keyCode === 27) {
+			if (e.defaultPrevented) return;
+			e.preventDefault();
+			e.stopPropagation();
+			close();
+			return;
+		}
+		if (e.key === 'Tab') scopeTab(e);
+	});
+
+	// ReactModal's scopeTab: keep Tab focus within the dialog
+	function scopeTab(e) {
+		const tabbable = Array.from(content.querySelectorAll(FOCUSABLE_SELECTOR)).filter(isTabbable);
+		if (!tabbable.length) {
+			e.preventDefault();
+			return;
+		}
+		const first = tabbable[0];
+		const last = tabbable[tabbable.length - 1];
+		const active = document.activeElement;
+		if (e.shiftKey && (active === first || active === content)) {
+			e.preventDefault();
+			last.focus();
+		} else if (!e.shiftKey && active === last) {
+			e.preventDefault();
+			first.focus();
+		}
+	}
+
+	// Focus that escapes to the body (e.g. after a click-away) returns into the dialog on Tab
+	function onDocumentKeyDownCapture(e) {
+		if (e.key !== 'Tab' || content.contains(document.activeElement)) return;
+		if (document.querySelector('.c-popover')) return;
+		e.preventDefault();
+		const tabbable = Array.from(content.querySelectorAll(FOCUSABLE_SELECTOR)).filter(isTabbable);
+		(e.shiftKey ? tabbable[tabbable.length - 1] : tabbable[0])?.focus();
+	}
+	document.addEventListener('keydown', onDocumentKeyDownCapture, true);
+
+	// Overlay click closes the modal (only for a press that started and ended on the overlay)
+	let overlayPressed = false;
+	overlay.addEventListener('mousedown', (e) => {
+		overlayPressed = e.target === overlay;
+	});
+	overlay.addEventListener('click', (e) => {
+		if (overlayPressed && e.target === overlay) close();
+		overlayPressed = false;
+	});
+
+	// Scrollbar sizes its child to the content's measured width (the hider overhangs by 50px)
+	const scrollContent = portal.querySelector('.c-sk-modal_content');
+	const scrollChild = portal.querySelector('.c-scrollbar__child');
+	const sizeScrollChild = () => {
+		scrollChild.style.width = `${scrollContent.clientWidth}px`;
+	};
+	sizeScrollChild();
+	const scrollResizeObserver = new ResizeObserver(sizeScrollChild);
+	scrollResizeObserver.observe(scrollContent);
+
+	keyboardMode.sync();
+
+	// shouldFocusAfterRender: focus the dialog unless focus already landed inside it, then onAfterOpen
+	if (!content.contains(document.activeElement)) content.focus();
+	focusOnOpen?.(select, content);
+
+	return { close };
+}
+
+function mountPreview({ createSelect, focusOnOpen }) {
+	const launcher = document.querySelector('[data-launcher]');
+	const open = () => {
+		launcher.hidden = true;
+		openPreviewModal({
+			createSelect,
+			focusOnOpen,
+			onClosed: () => {
+				launcher.hidden = false;
+				launcher.querySelector('button').focus();
+			},
+		});
+	};
+	launcher.querySelector('button').addEventListener('click', open);
+	open();
+}
+
+
+mountPreview({
+	createSelect: createMultiSelectV2,
+	// v2: onAfterOpen focuses the combobox
+		focusOnOpen: (select) => select.combobox.focus(),
+});
+</script>
+</body>
+</html>

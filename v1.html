@@ -1,0 +1,2321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MultiSelect v1 language preview</title>
+<!--
+	Mock of /multiselect-language-v1-preview from webapp (js/modern/components/multi-select-language-preview/,
+	origin/master). Styles are the compiled Slack Kit CSS with light-theme tokens resolved; behavior is a
+	vanilla-JS port of the slack-kit select components. Fonts load from ./fonts.
+-->
+<style>
+@layer sk.base, sk.foundation, sk.core, sk.components;
+
+/* ---------- fonts (Slack-Lato, lato-2, exported from webapp) ---------- */
+@layer sk.base {
+	@font-face { font-family: Slack-Lato; font-style: normal; font-weight: 400; src: url(fonts/lato-regular.woff2) format("woff2"); unicode-range: U+0-2157, U+2159-F8FE, U+F900-FFFF; }
+	@font-face { font-family: Slack-Lato; font-style: normal; font-weight: 700; src: url(fonts/lato-bold.woff2) format("woff2"); unicode-range: U+0-F8FE, U+F900-FFFF; }
+	@font-face { font-family: Slack-Lato; font-style: normal; font-weight: 900; src: url(fonts/lato-black.woff2) format("woff2"); unicode-range: U+0-F8FE, U+F900-FFFF; }
+}
+
+/* ---------- global base (slack_kit_base rollup) ---------- */
+@layer sk.base {
+	body, h1, h2, h3, h4, h5, h6, p, blockquote, pre, dl, dd, ol, ul, form, fieldset, legend, figure, table, th, td, caption, hr { margin: 0; padding: 0; }
+	h1, h2, h3, h4, h5, h6 { font-weight: normal; }
+	html, body { box-sizing: border-box; text-rendering: optimizelegibility; width: 100%; }
+	*, ::before, ::after { box-sizing: inherit; }
+	body {
+		font-family: Slack-Lato, Slack-Fractions, appleLogo, sans-serif;
+		font-size: 15px;
+		line-height: 1.46668;
+		font-weight: initial;
+		letter-spacing: inherit;
+		color: #1d1c1d;
+		font-variant-ligatures: common-ligatures;
+		-moz-osx-font-smoothing: grayscale;
+		-webkit-font-smoothing: antialiased;
+	}
+	h1 { letter-spacing: inherit; font-size: 28px; font-weight: 900; line-height: 1.2143; }
+	strong, b { font-weight: 700; }
+	p, ul, ol { margin-bottom: 16px; }
+	button { cursor: pointer; background-color: transparent; border-width: 0; padding: 0; }
+	input, textarea, select, button { font-family: inherit; }
+	.c-form--small { --sk_input_styles-radius: 8px; }
+	.c-form--large { --sk_input_styles-radius: 12px; }
+}
+:root { color-scheme: light; }
+html, body { height: 100%; }
+
+/* ---------- mock-only page chrome ---------- */
+.mock-launcher { padding: 28px; }
+.offscreen { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---------- helpers ---------- */
+.flow_root { display: flow-root; }
+.padding_top_100 { padding-top: 16px; }
+.margin_bottom_50 { margin-bottom: 8px; }
+.sk_foreground_max { color: rgba(29, 28, 29, 0.7); }
+
+/* ---------- icons (@tinyspeck/icons) ---------- */
+[data-sk-icon] { width: 1em; height: 1em; font-size: var(--s, inherit); print-color-adjust: exact; flex-shrink: 0; display: block; }
+.is-inline { vertical-align: -.125em; display: inline-block; }
+
+/* ---------- modal overlay / dialog ---------- */
+.c-sk-overlay { z-index: 1000; justify-content: center; align-items: center; width: 100%; height: 100%; display: flex; position: fixed; top: 0; left: 0; overflow: auto; }
+.c-sk-overlay::before { content: ""; opacity: 0; background: rgba(0, 0, 0, 0.6); width: 100%; height: 100%; transition: opacity 80ms linear; position: absolute; top: 0; left: 0; }
+.c-sk-overlay.ReactModal__Overlay--after-open:not(.ReactModal__Overlay--before-close)::before { opacity: 1; }
+.c-sk-modal { background-color: #fff; border-radius: 8px; flex-direction: column; max-height: 100%; display: flex; position: relative; overflow: hidden; box-shadow: 0 0 0 1px rgba(29, 28, 29, 0.13), 0 18px 48px 0 rgba(0, 0, 0, 0.35); }
+.c-sk-modal:focus { outline: none; }
+.c-sk-modal--fixed { width: 100%; max-width: 520px; height: auto; }
+@media only screen and (max-width: 640px) { .c-sk-modal--responsive { max-width: 324px; } }
+
+.c-sk-modal__close_button { color: #454447; z-index: 1; position: absolute; top: 20px; right: 20px; }
+.c-sk-modal__close_button:hover { background-blend-mode: multiply; color: #1d1c1d; background-image: linear-gradient(rgba(69, 68, 71, 0.06), rgba(69, 68, 71, 0.06)); }
+@media only screen and (max-width: 640px) { .c-sk-modal__close_button { width: 34px; height: 34px; top: 8px; right: 8px; } }
+@layer sk.foundation {
+	.c-button-unstyled { color: inherit; font-family: inherit; font-size: inherit; font-stretch: inherit; font-style: inherit; font-variant: inherit; font-weight: inherit; line-height: inherit; overflow: initial; text-align: initial; vertical-align: initial; cursor: pointer; background: none; border: 0; margin: 0; padding: 0; }
+	.c-button-unstyled:hover, .c-button-unstyled:focus, .c-button-unstyled:active { outline: none; }
+}
+@layer sk.core {
+	.c-icon_button { --sk_button-styles-radius: 8px; border-radius: var(--sk_button-styles-radius); height: var(--sk_button-size); width: var(--sk_button-size); font-size: calc(.5 * var(--sk_button-size) + 2px); justify-content: center; align-items: center; transition-property: color, background-color, border-color; transition-duration: 80ms; transition-timing-function: cubic-bezier(.36, .19, .29, 1); display: inline-flex; position: relative; }
+	.c-icon_button--size_medium { --sk_button-size: 36px; }
+	.c-icon_button--default { color: #454447; }
+	.c-icon_button--default:hover { color: #1d1c1d; background-color: #eaeaea; }
+	.c-icon_button--default:active { background-blend-mode: multiply; background-image: linear-gradient(rgba(69, 68, 71, 0.13), rgba(69, 68, 71, 0.13)); }
+}
+
+.c-sk-modal_header { background-color: #fff; border-radius: 8px 8px 0 0; flex-shrink: 0; width: 100%; min-height: 70px; overflow: hidden; }
+@media only screen and (max-width: 640px) { .c-sk-modal_header { min-height: 52px; } }
+.c-sk-modal_title_bar { align-items: center; width: 100%; min-height: 70px; padding: 20px 28px; display: flex; }
+.c-sk-modal_title_bar--close_button_visible { padding-right: 76px; }
+@media only screen and (max-width: 640px) {
+	.c-sk-modal_title_bar { min-height: 36px; padding: 8px 8px 8px 16px; }
+	.c-sk-modal_title_bar__text { flex-direction: column; justify-content: center; min-height: 36px; display: flex; }
+	.c-sk-modal_title_bar__text h1:only-child { font-size: 18px; }
+}
+.c-sk-modal_title_bar__text h1 { letter-spacing: inherit; font-size: 18px; font-weight: 900; line-height: 1.33334; }
+.c-sk-modal_title_bar__text h1:only-child { letter-spacing: inherit; font-size: 22px; font-weight: 900; line-height: 1.36365; }
+
+.c-sk-modal_content { background: #fff; flex-shrink: 1; min-height: 50px; display: flex; position: relative; overflow: hidden; }
+.c-sk-modal_content::after { box-sizing: border-box; content: ""; pointer-events: none; border-top: 1px solid transparent; border-bottom: 1px solid transparent; width: 100%; height: 100%; transition: border 80ms linear; position: absolute; inset: 0; }
+.c-sk-modal_content__inner { overflow: hidden; }
+.c-scrollbar { position: relative; overflow: hidden; }
+.c-scrollbar__hider { outline: none; height: 100%; position: absolute; inset: 0 -50px 0 0; overflow: hidden scroll; transform: translateZ(0); }
+.c-scrollbar__hider::-webkit-scrollbar { display: none; }
+.c-scrollbar--inherit_size { width: 100%; }
+.c-scrollbar--inherit_size .c-scrollbar__hider { margin-right: -50px; position: relative; right: 0; }
+.c-scrollbar__track { width: 8px; position: absolute; top: 4px; bottom: 4px; right: 4px; }
+.c-scrollbar--hidden > .c-scrollbar__track { display: none; }
+.c-scrollbar__bar { opacity: 0; cursor: default; z-index: 1; will-change: transform; background: rgba(29, 28, 29, 0.52); border-radius: 4px; outline: none; width: 100%; position: absolute; top: 0; left: 0; }
+.c-sk-modal_content_section { padding: 0 28px; }
+@media only screen and (max-width: 640px) { .c-sk-modal_content_section { padding: 0 16px; } }
+.c-sk-modal_footer { background-color: #fff; border-radius: 0 0 8px 8px; flex-shrink: 0; justify-content: flex-end; align-items: center; width: 100%; height: 84px; margin-top: auto; padding: 24px 28px; display: flex; overflow: hidden; }
+@media only screen and (max-width: 640px) { .c-sk-modal_footer_actions { display: flex; } }
+.c-sk-modal_footer_actions { margin-left: auto; }
+.c-sk-modal_footer_actions > * { vertical-align: bottom; margin-right: 12px; }
+.c-sk-modal_footer_actions > :last-child { margin-right: 0; }
+
+/* ---------- checkbox + inline label ---------- */
+.c-input_checkbox { box-sizing: border-box; display: block; flex: none; margin: 0 12px 0 0; padding: 0 12px; cursor: pointer; background-color: #ffffff; font-size: 18px; }
+.c-input_checkbox[disabled] { cursor: default; }
+.c-input_checkbox:focus { outline-style: auto; }
+.c-input_checkbox--focus-visible:focus { outline: none; box-shadow: 0 0 0 1px #1264a3, 0 0 0 5px rgba(18, 100, 163, 0.3); border-radius: 8px; }
+.c-label { font-size: 15px; line-height: 1.46667; font-weight: 700; }
+.c-label__text { display: block; padding-bottom: 8px; }
+.c-label--inline { display: flex; align-items: baseline; vertical-align: middle; margin-bottom: 4px; }
+.c-label--inline .c-label__text { order: 1; padding-bottom: 0; font-weight: 400; position: relative; top: -1px; }
+.c-label--pointer { cursor: pointer; }
+
+/* ---------- buttons ---------- */
+.c-button { --sk_button-styles-radius: 4px; position: relative; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: var(--sk_button-styles-radius); outline: none; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; cursor: pointer; text-align: center; text-decoration: none; white-space: nowrap; transition-property: color, background-color, border-color; transition-duration: 80ms; transition-timing-function: cubic-bezier(0.36, 0.19, 0.29, 1); }
+.c-button:is(:hover, :active, :focus) { text-decoration: none; }
+.c-button--medium { --sk_button-styles-radius: 8px; min-width: 80px; height: 36px; padding: 0 12px 1px; font-size: 15px; }
+.c-button--primary { background-color: #007a5a; color: #ffffff; font-weight: 700; box-shadow: none; }
+.c-button--primary::after { content: ''; position: absolute; inset: 0; border-radius: var(--sk_button-styles-radius); visibility: hidden; }
+.c-button--primary:hover { background-blend-mode: multiply; background-image: linear-gradient(#0a403221, #0a403221); box-shadow: 0 1px 3px 0 #00000019, 0 1px 2px -1px #00000019; color: #ffffff; }
+.c-button--primary:active { background-blend-mode: multiply; background-image: linear-gradient(#0a403238, #0a403238); box-shadow: none; }
+.c-button--outline { background-color: #ffffff; border: 1px solid #5e5d6073; background-clip: padding-box; color: #1d1c1d; font-weight: 700; }
+.c-button--outline:hover { background-color: #f8f8f8; box-shadow: 0 1px 3px 0 #00000019, 0 1px 2px -1px #00000019; }
+.c-button--outline:active { background-color: #f8f8f8; box-shadow: none; }
+.c-button--outline.c-button--focus-visible:focus { border: 1px solid rgba(255, 255, 255, 0); background-clip: initial; }
+.c-button--focus-visible:focus { outline: none; box-shadow: 0 0 0 1px #1264a3, 0 0 0 5px rgba(18, 100, 163, 0.3); border-radius: 8px; }
+
+/* ---------- token (_common.token.source.less, plain token rules) ---------- */
+.c-token { --sk_avatar-border-radius: 4px; --sk_base_icon-border-radius: 4px; color: #1d1c1d; white-space: nowrap; background-color: #36c5f021; border: 1px solid #0000; border-radius: 4px; align-items: center; padding-right: 4px; font-weight: 700; display: flex; }
+.c-token__content { align-items: center; display: flex; position: relative; }
+.c-token_content__inner { align-items: center; padding: 0 4px; display: flex; }
+.c-token_content__inner ::selection { background-color: #0000; }
+.c-token--large { min-height: 32px; margin: 5px 0 0 5px; font-size: 20px; }
+.c-token--large .c-token_content__label { font-size: 18px; line-height: 32px; }
+.c-token--selected:not(.c-token--loading, .c-token--invalid, .c-token--disabled, .c-token--error, .c-token--unknown, .c-token--restricted) { color: #fff; background-color: #1264a3; }
+.c-token--noMargin { margin: 0; }
+.c-token--disabled, .c-token--disabled:hover { color: #454447; background-color: #1d1c1d0f; }
+.c-truncate { -webkit-line-clamp: var(--lines); white-space: break-spaces; -webkit-box-orient: vertical; display: -webkit-box; overflow: hidden; }
+.c-truncate--break_words { word-break: break-all; }
+
+/* ---------- options list popover ---------- */
+.c-popover:not(.c-popover--overlay-inherit) { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.c-popover--fade { animation: 1s ease 0s 1 normal forwards c-popover-fade; }
+@keyframes c-popover-fade { from { opacity: 0; } to { opacity: 1; } }
+.c-popover--fade .ReactModal__Content { transition: none; }
+.c-popover--fade .ReactModal__Content--before-close { opacity: 0; transition-property: opacity; }
+.c-popover--fade.ReactModal__Overlay--before-close { pointer-events: none; }
+.c-popover--z_above_fs { z-index: 1053; }
+
+.c-select_options_list__wrapper { background-color: #f8f8f8; border-radius: 4px; box-shadow: 0 0 0 1px rgba(29, 28, 29, 0.13), 0 5px 10px rgba(0, 0, 0, 0.12); margin: 0; overflow: hidden; padding: 0; position: relative; -webkit-user-select: none; user-select: none; z-index: 1012; }
+.c-select_options_list__wrapper .c-select_options_list { height: 100%; overflow-y: auto; }
+.c-select_options_list .ReactVirtualized__Grid__innerScrollContainer { will-change: transform; }
+.c-select_options_list:focus { outline-width: 0; }
+.c-select_options_list__option { font-size: 15px; line-height: 1.46668; font-weight: initial; letter-spacing: inherit; display: flex; align-items: center; color: #1d1c1d; cursor: pointer; padding: 0 24px; box-sizing: border-box; }
+.c-select_options_list__option:active, .c-select_options_list__option:focus { outline: none; }
+.c-select_options_list__option--disabled { color: #454447; }
+.c-select_options_list__option--disabled:hover { cursor: default; background-color: #eaeaea; }
+.c-select_options_list__option--selected { color: #1264a3; }
+.c-select_options_list__option--active { background-color: #1264a3; color: #fff; }
+.c-select_options_list__option--active.c-select_options_list__option--disabled { color: #454447; background-color: #eaeaea; }
+.c-select_options_list__option--pseudo-active { background-color: rgba(29, 28, 29, 0.06); }
+.c-select_options_list__option_shortcut { margin-inline-start: 16px; }
+.c-select_options_list__option_label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; box-sizing: border-box; }
+/* The real checkmark is an icon-font glyph (U+E285 in 'Slack v2'); this is its outline as SVG */
+.c-select_options_list__selected { display: inline-flex; width: 0; }
+.c-select_options_list__selected-svg { flex: none; width: 15px; height: 15px; margin: 0 2px 0 -18px; }
+
+/* KeyboardKey (Panda atomic CSS in the real app) */
+@layer panda_utilities {
+	.sk-kbd { display: inline-grid; place-items: center; text-align: center; vertical-align: middle; background-color: #eaeaea; color: #1d1c1d; font-size: 15px; font-weight: 400; line-height: 1; min-width: 1.75rem; height: 1.75rem; padding-block: 0; padding-inline: 0.5rem; margin: 0.25rem; border-radius: 4px; border-block-end-width: 1px; border-block-end-style: solid; border-block-end-color: rgba(94, 93, 96, 0.13); }
+	.sk-kbd--slim { height: 1.25rem; min-width: 1.25rem; padding-inline: 0.25rem; font-size: 13px; margin-block-start: 0; margin-inline: 0.25rem; margin-block-end: 0.25rem; }
+	.sk-kbd--flush { margin: 0; }
+	.sk-kbd--slim.sk-kbd--flush { margin-block-start: 0; margin-inline: 0; margin-block-end: 0; }
+}
+
+/* ---------- field errors (InlineAlert) ---------- */
+.c-inline_alert { color: #c01343; margin: 4px 0; font-size: 13px; font-weight: 400; }
+.c-field_input__helpers { margin-top: 8px; margin-bottom: 4px; }
+.c-field_input__helpers + .c-field_input__helpers { margin-top: 0; margin-bottom: 4px; }
+
+/* ---------- v1 MultiSelectInput (_common.multi_select_input.module.less) ---------- */
+.ms1-multiSelectInput { color: #1d1c1d; --sk-multi-select-border-width: 1px; background-color: #fff; border: 1px solid #7c7a7f; border-radius: var(--sk_input_styles-radius, 8px); min-height: 36px; padding: 0 28px 4px 4px; font-size: 15px; line-height: 1.4668; transition: border 80ms ease-out, box-shadow 80ms ease-out; position: relative; overflow: hidden; }
+.ms1-large { min-height: 44px; font-size: 18px; }
+.ms1-initial { padding-bottom: 0; padding-left: 12px; }
+.ms1-multiSelectInput.ms1-large { padding-right: 32px; }
+.ms1-multiSelectInput:hover { overflow: auto; }
+.ms1-disabled { background-color: #f8f8f8; }
+.ms1-focused { -webkit-appearance: none; appearance: none; border-color: #0000; border-radius: var(--sk_input_styles-radius, 8px); box-shadow: 0 0 0 1px #1264a3, 0 0 0 5px #1264a34d; }
+.ms1-invalid { border-color: #e01e5a; }
+.ms1-invalid:focus, .ms1-invalid:focus-within { box-shadow: 0 0 0 1px #e01e5a, 0 0 0 5px #e01e5a4d; }
+.ms1-invalid.ms1-focused { border-radius: var(--sk_input_styles-radius, 8px); box-shadow: 0 0 0 1px #e01e5a, 0 0 0 5px #e01e5a4d; }
+.ms1-filterQuery { min-width: 1px; height: 1em; margin-top: -2px; }
+.ms1-space { -webkit-user-select: none; user-select: none; width: 0; font-size: 0; }
+.ms1-initial .ms1-filterQuery { margin-top: 6px; }
+.ms1-initial.ms1-large .ms1-filterQuery { margin-top: 8px; }
+.ms1-placeholder { color: #5e5d60; position: absolute; top: 6px; left: 12px; }
+.ms1-large .ms1-placeholder { top: 8px; }
+.ms1-input { outline: none; flex-flow: wrap; place-content: flex-start; align-items: center; display: flex; }
+.ms1-token { cursor: pointer; display: inline-flex; }
+.ms1-disabled .ms1-token { cursor: default; }
+.ms1-removeToken { color: #1d1c1d; }
+.ms1-removeToken:hover { color: #1d1c1d; background-color: #1d1c1d0f; }
+.ms1-removeTokenSelected { color: #fff; }
+.ms1-removeTokenSelected:hover { color: #fff; background-color: #ffffff2e; }
+
+</style>
+</head>
+<body>
+<div class="mock-launcher" data-launcher hidden>
+	<button class="c-button c-button--primary c-button--medium" type="button">Open preview</button>
+</div>
+<script>
+/* ==========================================================================
+   Shared mock runtime: React-style batching, fuzzy filter, announcer, and the
+   SelectPopoverOptionsList + SelectOptionsList port (multiSelectMode only).
+   ========================================================================== */
+
+const isMac = () => /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
+const uuid = () => Math.random().toString(36).slice(2);
+const buddyId = (id, type) => `${id}_${type}`;
+const escapeHtml = (s) =>
+	String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+function setAttr(el, name, value) {
+	if (value === null || value === undefined) el.removeAttribute(name);
+	else if (el.getAttribute(name) !== String(value)) el.setAttribute(name, String(value));
+}
+
+// isPrintableKeyEvent
+const isPrintableKeyEvent = (e) => !!e && !e.metaKey && !e.ctrlKey && e.key?.length === 1;
+
+/* --------------------------------------------------------------------------
+   Store: a tiny stand-in for React state. setState calls made while an event
+   handler (or a commit) is running are queued and applied together once the
+   outermost handler returns, so handlers read the last committed state just
+   like props/state in React.
+   -------------------------------------------------------------------------- */
+function createStore(initialState, commit) {
+	let state = initialState;
+	let depth = 0;
+	let flushing = false;
+	const queue = [];
+
+	const flush = () => {
+		if (flushing) return;
+		flushing = true;
+		try {
+			while (queue.length) {
+				const batch = queue.splice(0);
+				const prev = state;
+				let next = state;
+				batch.forEach(({ update }) => {
+					const changes = typeof update === 'function' ? update(next) : update;
+					if (changes) next = { ...next, ...changes };
+				});
+				state = next;
+				depth += 1;
+				try {
+					commit(prev, state);
+					batch.forEach(({ callback }) => callback && callback());
+				} finally {
+					depth -= 1;
+				}
+			}
+		} finally {
+			flushing = false;
+		}
+	};
+
+	return {
+		get: () => state,
+		set(update, callback) {
+			queue.push({ update, callback });
+			if (depth === 0) flush();
+		},
+		// Wraps an event handler so the state updates it makes are batched.
+		batched(fn) {
+			return function batchedHandler(...args) {
+				depth += 1;
+				try {
+					return fn.apply(this, args);
+				} finally {
+					depth -= 1;
+					if (depth === 0) flush();
+				}
+			};
+		},
+		forceCommit() {
+			queue.push({ update: null });
+			if (depth === 0) flush();
+		},
+	};
+}
+
+/* --------------------------------------------------------------------------
+   Announcer API stand-in (polite + assertive live regions)
+   -------------------------------------------------------------------------- */
+const announcer = (() => {
+	let regions = null;
+	const ensure = () => {
+		if (regions) return regions;
+		regions = {};
+		['polite', 'assertive'].forEach((politeness) => {
+			const el = document.createElement('div');
+			el.className = 'offscreen';
+			el.setAttribute('aria-live', politeness);
+			el.setAttribute('aria-atomic', 'true');
+			document.body.appendChild(el);
+			regions[politeness] = el;
+		});
+		return regions;
+	};
+	return {
+		send({ message, assertive = false, deferBy = 0 }) {
+			if (!message) return;
+			const run = () => {
+				const el = ensure()[assertive ? 'assertive' : 'polite'];
+				el.textContent = '';
+				setTimeout(() => {
+					el.textContent = message;
+				}, 30);
+			};
+			if (deferBy) setTimeout(run, deferBy);
+			else run();
+		},
+	};
+})();
+
+/* --------------------------------------------------------------------------
+   FuzzyMatcher + defaultFilter (fuzzyLimit 3; no CJK, no beyond-word-boundary)
+   -------------------------------------------------------------------------- */
+const SEPARATOR_CHARS = /[- _'.\u2019\u200b()/\uFF0F]/gu;
+const NEEDS_NORMALIZING = /[^\x20-\x7f]|[A-Z]|^ | $| {2}/;
+const deburr = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+function normalizeStringForMatching(str = '') {
+	if (typeof str !== 'string') return '';
+	if (str.length && !NEEDS_NORMALIZING.test(str)) return str;
+	const trimmed = str.trim();
+	if (!trimmed.length) return '';
+	return deburr(trimmed.toLocaleLowerCase()).replace(/\s+/g, ' ');
+}
+
+class FuzzyMatcher {
+	constructor(query, options = {}) {
+		this.normalizedQuery = normalizeStringForMatching(query);
+		this.queryNode = FuzzyMatcher.queryToLinkedList(this.normalizedQuery);
+		this.fuzzyLimit = options.fuzzyLimit ?? Infinity;
+		this.queryNoSeparators = this.normalizedQuery.replace(SEPARATOR_CHARS, '');
+	}
+
+	normalizeAndScore(sourceString) {
+		const normalized = normalizeStringForMatching(sourceString);
+		if (normalized === this.normalizedQuery) return 0;
+		return this.score(normalized);
+	}
+
+	score(sourceString) {
+		if (!sourceString) return Infinity;
+		const sourceNoSeparators = sourceString.replace(SEPARATOR_CHARS, '');
+		if (this.queryNoSeparators.length > sourceNoSeparators.length) return Infinity;
+		if (!FuzzyMatcher.containsAllLetters(sourceString, this.queryNode) || !this.queryNode) {
+			return Infinity;
+		}
+		const node = FuzzyMatcher.lettersToGraph(sourceString);
+		if (!node) return Infinity;
+		const result = FuzzyMatcher.searchWordBoundariesOnly(node, this.queryNode);
+		if (!result) return Infinity;
+		const summedUp = FuzzyMatcher.countResult(result);
+		return summedUp > this.fuzzyLimit ? Infinity : summedUp;
+	}
+
+	static lettersToGraph(str) {
+		const letters = str.split('');
+		const first = letters.shift();
+		return FuzzyMatcher.lettersToGraphWorker(first, null, letters, [], 0);
+	}
+
+	static lettersToGraphWorker(letter, prev, rest, jumps, index) {
+		if (!letter) return null;
+		const node = {
+			letter,
+			ignored: letter.match(SEPARATOR_CHARS),
+			next: null,
+			prev,
+			jumps,
+			visited: false,
+			index,
+		};
+		const shouldAddJump = !node.ignored && (!prev || (prev.ignored && !node.ignored));
+		if (shouldAddJump && jumps.length < 5) jumps.push(node);
+		const nextNode = FuzzyMatcher.lettersToGraphWorker(rest.shift(), node, rest, jumps, index + 1);
+		if (nextNode) node.next = nextNode;
+		return node;
+	}
+
+	static queryToLinkedList(query) {
+		if (!query) return null;
+		let letters = query.split('');
+		if (letters.length > 1024) letters = letters.slice(0, 1024);
+		return FuzzyMatcher.queryToLinkedListWorker(letters, 0);
+	}
+
+	static queryToLinkedListWorker(letters, index) {
+		if (index >= letters.length) return null;
+		const letter = letters[index];
+		return {
+			letter,
+			isSeparator: !!(letter.match(SEPARATOR_CHARS) && (index !== 0 || letters.length > 1)),
+			next: FuzzyMatcher.queryToLinkedListWorker(letters, index + 1),
+			index,
+		};
+	}
+
+	static searchWordBoundariesOnly(node, queryNode) {
+		let result = FuzzyMatcher.searchWorker(node, queryNode, 0);
+		if (!result) {
+			result = node.jumps.reduce((match, jumpNode) => {
+				if (match || jumpNode === node) return match;
+				return FuzzyMatcher.searchWorker(jumpNode, queryNode, 1);
+			}, null);
+		}
+		return result;
+	}
+
+	static searchWorker(node, queryNode, score) {
+		if (!node || !queryNode) return null;
+		let thisMatch;
+		if (!node.visited && (node.letter === queryNode.letter || (node.ignored && queryNode.isSeparator))) {
+			thisMatch = { node, count: score };
+		}
+		if (!thisMatch) return null;
+		if (!queryNode.next) return thisMatch;
+		node.visited = true;
+		let next = FuzzyMatcher.searchWorker(node.next, queryNode.next, 0);
+		let nextQueryNode = queryNode.next;
+		while (nextQueryNode.isSeparator && nextQueryNode.next) nextQueryNode = nextQueryNode.next;
+		if (!next) {
+			next = node.jumps.reduce((result, jumpNode) => {
+				if (result) return result;
+				if (jumpNode.visited || jumpNode === node) return result;
+				return FuzzyMatcher.searchWorker(jumpNode, nextQueryNode, 1);
+			}, null);
+		}
+		node.visited = false;
+		if (next) {
+			thisMatch.next = next;
+			return thisMatch;
+		}
+		return null;
+	}
+
+	static countResult(result) {
+		if (!result) return 0;
+		return result.count + FuzzyMatcher.countResult(result.next);
+	}
+
+	static containsAllLetters(str, queryNode) {
+		let ptr = queryNode;
+		while (ptr) {
+			if (!(ptr.isSeparator || str.includes(ptr.letter))) return false;
+			ptr = ptr.next;
+		}
+		return true;
+	}
+}
+
+function defaultFilter(options, filterQuery) {
+	if (!filterQuery) return options;
+	return options.filter((option) =>
+		isFinite(new FuzzyMatcher(filterQuery, { fuzzyLimit: 3 }).normalizeAndScore(option.label)),
+	);
+}
+
+/* --------------------------------------------------------------------------
+   Options list (SelectPopoverOptionsList + SelectOptionsList, multiSelectMode)
+   -------------------------------------------------------------------------- */
+const DEFAULT_ROW_HEIGHT = 28;
+const MAX_LIST_HEIGHT = 240;
+const LIST_PADDING = 2;
+const INPUT_WIDTH_OVERFLOW = 12;
+const INPUT_HEIGHT_OVERLAP = 4;
+const INPUT_OVERLAP_COMPENSATION = 32;
+const POPOVER_FADE_DURATION = 80;
+const POPOVER_ALLOWANCE_Y = 10;
+const EMPTY_STATE_OPTION_VALUE = 'sk-select-empty-state';
+
+const comboFor = (e) => {
+	const key = { ArrowDown: 'down', ArrowUp: 'up', Enter: 'enter', Tab: 'tab' }[e.key];
+	if (!key) return null;
+	return [e.shiftKey && 'shift', e.altKey && 'alt', e.ctrlKey && 'ctrl', e.metaKey && 'meta', key]
+		.filter(Boolean)
+		.join('+');
+};
+
+/**
+ * host: {
+ *   selectId, getState(), setSelectState(changes, cb?),
+ *   inputEl(), clickRegionEl(), sizingEl(), xAnchorEl?(), offsetY?(),
+ *   persistFilterQueryOnClose, advanceFocusOnTab,
+ *   onSelectionChange(option, isOptionClicked, viaTab), onOptionUnselected?,
+ *   onOptionsListClose(clickedInput?)
+ * }
+ * state: { isExpanded, filterQuery, options, selectedOptions, activeRowIndex,
+ *          pseudoActiveRowIndex, initialActiveOption }
+ */
+class OptionsList {
+	constructor(host, batched) {
+		this.host = host;
+		this.batched = batched;
+		this.mounted = false;
+		this.isMouseMoveEnabled = false;
+		this.rowEls = [];
+		this.rowsKey = null;
+		this.prevSnapshot = null;
+		this.enableMouseMoveTimer = null;
+		this.lastPseudoAnnouncementKey = null;
+		this.onDocumentKeyDown = batched(this.onDocumentKeyDown.bind(this));
+		this.onOverlayMouseDown = this.onOverlayMouseDown.bind(this);
+		this.onOverlayClick = batched(this.onOverlayClick.bind(this));
+		this.measure = this.measure.bind(this);
+	}
+
+	get state() {
+		return this.host.getState();
+	}
+
+	getRows() {
+		const { options } = this.state;
+		if (options && options.length) return options;
+		return [{ label: 'No items', value: EMPTY_STATE_OPTION_VALUE, isDisabled: true }];
+	}
+
+	isOptionSelected(option) {
+		const { selectedOptions } = this.state;
+		if (!selectedOptions || !selectedOptions.length || !option) return false;
+		return selectedOptions.some((selected) => selected.value === option.value);
+	}
+
+	// Called by the host after every commit, like a render pass.
+	update() {
+		const state = this.state;
+		if (!state.isExpanded) {
+			if (this.mounted) this.unmount();
+			return;
+		}
+		if (!this.mounted) {
+			this.mount();
+			return;
+		}
+		const prev = this.prevSnapshot;
+		this.prevSnapshot = this.snapshot();
+		this.render();
+		this.componentDidUpdate(prev);
+	}
+
+	snapshot() {
+		const { options, filterQuery } = this.state;
+		return { optionsKey: (options || []).map((o) => `${o.value}\u0000${o.label}`).join('\u0001'), filterQuery };
+	}
+
+	/* ---------- lifecycle ---------- */
+
+	mount() {
+		this.mounted = true;
+		this.prevSnapshot = this.snapshot();
+		this.isInsideForm = !!this.host.inputEl()?.closest('form');
+		this.buildDom();
+		this.render();
+		document.addEventListener('keydown', this.onDocumentKeyDown);
+		window.addEventListener('resize', this.measure);
+		window.addEventListener('scroll', this.measure);
+		this.resizeObserver = new ResizeObserver(this.measure);
+		[this.host.sizingEl(), this.host.xAnchorEl?.()].forEach((el) => el && this.resizeObserver.observe(el));
+
+		// componentDidMount
+		const { initialActiveOption } = this.state;
+		// a11y_no_auto_highlight_search_multi_select is on: only an Alt/Arrow-key open highlights a row
+		const activeRowIndex = initialActiveOption ? this.getActiveRowIndex() : undefined;
+		const pseudoActiveRowIndex = this.getPseudoActiveRowIndex(activeRowIndex);
+		this.host.setSelectState({ activeRowIndex, pseudoActiveRowIndex, initialActiveOption: undefined });
+		if (typeof activeRowIndex === 'number' && activeRowIndex >= 0) this.scrollToRow(activeRowIndex);
+	}
+
+	componentDidUpdate(prev) {
+		const next = this.prevSnapshot;
+		const hasOptionsChanged = prev.optionsKey !== next.optionsKey;
+		const hasSearchFilterChanged = prev.filterQuery !== next.filterQuery;
+		if (!hasOptionsChanged && !hasSearchFilterChanged) return;
+		const { initialActiveOption } = this.state;
+		// Toggle on: the auto highlight is suppressed, whatever row would have been chosen
+		const activeRowIndex = initialActiveOption !== undefined ? this.getActiveRowIndex() : undefined;
+		const pseudoActiveRowIndex = this.getPseudoActiveRowIndex(activeRowIndex);
+		this.host.setSelectState({ activeRowIndex, pseudoActiveRowIndex });
+		if (typeof activeRowIndex === 'number' && activeRowIndex >= 0) this.scrollToRow(activeRowIndex);
+	}
+
+	unmount() {
+		this.mounted = false;
+		document.removeEventListener('keydown', this.onDocumentKeyDown);
+		window.removeEventListener('resize', this.measure);
+		window.removeEventListener('scroll', this.measure);
+		this.resizeObserver?.disconnect();
+		clearTimeout(this.enableMouseMoveTimer);
+		this.isMouseMoveEnabled = false;
+		this.lastPseudoAnnouncementKey = null;
+		this.lastEmptyAnnouncementKey = null;
+		const portal = this.portal;
+		this.portal = null;
+		this.rowEls = [];
+		this.rowsKey = null;
+		if (!portal) return;
+		// ReactModal closeTimeoutMS: fade the content out, then remove the portal
+		portal.overlay.classList.add('ReactModal__Overlay--before-close');
+		portal.content.classList.add('ReactModal__Content--before-close');
+		setTimeout(() => portal.root.remove(), POPOVER_FADE_DURATION);
+	}
+
+	/* ---------- DOM ---------- */
+
+	buildDom() {
+		const { selectId } = this.host;
+		const root = document.createElement('div');
+		root.className = 'ReactModalPortal';
+		root.innerHTML = `
+			<div class="ReactModal__Overlay ReactModal__Overlay--after-open c-popover c-popover--z_above_fs c-popover--fade" style="animation-duration: ${POPOVER_FADE_DURATION}ms;">
+				<div class="ReactModal__Content ReactModal__Content--after-open popover c-popover__content" role="presentation" tabindex="-1" style="position: absolute; outline: none; transition-duration: ${POPOVER_FADE_DURATION}ms;">
+					<div role="presentation">
+						<div class="c-select_options_list__wrapper" data-qa="${escapeHtml(selectId)}-options-list-wrapper">
+							<div class="c-select_options_list" data-qa="${escapeHtml(selectId)}-options-list" id="${escapeHtml(buddyId(selectId, 'listbox'))}" aria-label="Options" aria-multiselectable="true" role="listbox" tabindex="-1">
+								<div class="ReactVirtualized__Grid ReactVirtualized__List c-select_options_list__virtual_list" role="presentation" no-bootstrap="1" style="box-sizing: content-box; direction: ltr; position: relative; will-change: transform; overflow-x: hidden; padding: 12px 0px;">
+									<div class="ReactVirtualized__Grid__innerScrollContainer" role="presentation" style="width: auto; overflow: hidden; position: relative;"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>`;
+		const overlay = root.querySelector('.c-popover');
+		const content = root.querySelector('.c-popover__content');
+		const listBody = root.querySelector('.c-select_options_list');
+		const grid = root.querySelector('.ReactVirtualized__Grid');
+		const inner = root.querySelector('.ReactVirtualized__Grid__innerScrollContainer');
+		overlay.addEventListener('mousedown', this.onOverlayMouseDown);
+		overlay.addEventListener('click', this.onOverlayClick);
+		// Don't debounce -- enabling must happen before the next mouseenter
+		listBody.addEventListener('mousemove', () => {
+			this.isMouseMoveEnabled = true;
+		});
+		document.body.appendChild(root);
+		this.portal = { root, overlay, content, listBody, grid, inner };
+	}
+
+	render() {
+		if (!this.portal) return;
+		const { selectId } = this.host;
+		const { activeRowIndex, pseudoActiveRowIndex, filterQuery } = this.state;
+		const rows = this.getRows();
+		const rowsKey = rows.map((o) => `${o.value}\u0000${o.label}`).join('\u0001');
+		const { inner } = this.portal;
+
+		if (rowsKey !== this.rowsKey) {
+			this.rowsKey = rowsKey;
+			inner.textContent = '';
+			this.rowEls = rows.map((option, index) => {
+				const row = document.createElement('div');
+				row.setAttribute('role', 'option');
+				row.tabIndex = -1;
+				row.id = buddyId(selectId, `option_${index}`);
+				row.style.cssText = `height: ${DEFAULT_ROW_HEIGHT}px; left: 0px; position: absolute; top: ${index * DEFAULT_ROW_HEIGHT}px; width: 100%;`;
+				row.addEventListener(
+					'click',
+					this.batched(() => this.onOptionClicked(this.getRows()[index])),
+				);
+				row.addEventListener(
+					'mouseenter',
+					this.batched(() => this.onMouseEnteredOption(index)),
+				);
+				row.addEventListener(
+					'mouseleave',
+					this.batched(() => this.onMouseLeftOption()),
+				);
+				inner.appendChild(row);
+				return row;
+			});
+		}
+
+		const setSize = rows.length;
+		rows.forEach((option, index) => {
+			const row = this.rowEls[index];
+			const isActive = typeof activeRowIndex === 'number' && activeRowIndex === index;
+			const isPseudoActive = !isActive && typeof pseudoActiveRowIndex === 'number' && pseudoActiveRowIndex === index;
+			const isSelected = this.isOptionSelected(option);
+			const isDisabled = !!option.isDisabled;
+			const className = [
+				'c-select_options_list__option',
+				isActive && 'c-select_options_list__option--active',
+				isPseudoActive && 'c-select_options_list__option--pseudo-active',
+				isSelected && 'c-select_options_list__option--selected',
+				isDisabled && 'c-select_options_list__option--disabled',
+			]
+				.filter(Boolean)
+				.join(' ');
+			if (row.className !== className) row.className = className;
+			row.setAttribute('aria-selected', String(!!isSelected));
+			row.setAttribute('aria-setsize', String(setSize));
+			row.setAttribute('aria-posinset', String(index + 1));
+			if (isDisabled) row.setAttribute('aria-disabled', 'true');
+			else row.removeAttribute('aria-disabled');
+			if (isActive) row.setAttribute('data-is-active', 'true');
+			else row.removeAttribute('data-is-active');
+
+			const html =
+				(isSelected ? `<span class="c-select_options_list__selected" aria-hidden="true">${CHECK_SMALL_SVG}</span>` : '') +
+				`<span data-qa="${escapeHtml(option.value)}" class="c-select_options_list__option_label">${escapeHtml(option.label)}</span>` +
+				(isPseudoActive ? `<span class="c-select_options_list__option_shortcut">${KEYBOARD_KEY_ENTER_HTML}</span>` : '');
+			if (row.__html !== html) {
+				row.__html = html;
+				row.innerHTML = html;
+			}
+		});
+
+		// Announcements: the pseudo-active option (assertive, 200ms) and the empty state (750ms)
+		if (typeof pseudoActiveRowIndex === 'number' && rows[pseudoActiveRowIndex]) {
+			const option = rows[pseudoActiveRowIndex];
+			const key = `${filterQuery ?? ''}-${String(option.value)}`;
+			if (key !== this.lastPseudoAnnouncementKey) {
+				this.lastPseudoAnnouncementKey = key;
+				announcer.send({ message: option.label, assertive: true, deferBy: 200 });
+			}
+		} else {
+			this.lastPseudoAnnouncementKey = null;
+		}
+		if (rows[0]?.value === EMPTY_STATE_OPTION_VALUE) {
+			if (this.lastEmptyAnnouncementKey !== filterQuery) {
+				this.lastEmptyAnnouncementKey = filterQuery;
+				announcer.send({ message: 'No items', deferBy: 750 });
+			}
+		} else {
+			this.lastEmptyAnnouncementKey = null;
+		}
+
+		this.measure();
+	}
+
+	// Popover + SelectPopoverOptionsList measuring/positioning
+	measure() {
+		if (!this.portal) return;
+		const sizingEl = this.host.sizingEl();
+		if (!sizingEl) return;
+		const targetBounds = sizingEl.getBoundingClientRect();
+		const xAnchorBounds = this.host.xAnchorEl?.()?.getBoundingClientRect() ?? targetBounds;
+		const anchorLeft = Math.min(xAnchorBounds.left, targetBounds.left + targetBounds.width / 2);
+		const rows = this.getRows();
+		const totalRowHeight = rows.length * DEFAULT_ROW_HEIGHT;
+
+		const spaceAbove = targetBounds.top;
+		const spaceBelow = window.innerHeight - targetBounds.bottom;
+		const isPopoverAbove = spaceBelow < Math.min(totalRowHeight, MAX_LIST_HEIGHT) && spaceBelow < spaceAbove;
+		const spaceAboveOrBelow = isPopoverAbove ? targetBounds.top : window.innerHeight - targetBounds.bottom;
+		const maxListHeight = Math.min(spaceAboveOrBelow - INPUT_OVERLAP_COMPENSATION, MAX_LIST_HEIGHT);
+		const width = targetBounds.width + INPUT_WIDTH_OVERFLOW * 2;
+		const height = totalRowHeight >= maxListHeight ? maxListHeight : totalRowHeight;
+		const actualWidth = Math.max(1, width - LIST_PADDING);
+
+		const { grid, inner, content } = this.portal;
+		grid.style.height = `${height}px`;
+		grid.style.width = `${actualWidth}px`;
+		grid.style.overflowY = totalRowHeight > height ? 'auto' : 'hidden';
+		inner.style.height = `${totalRowHeight}px`;
+		inner.style.maxHeight = `${totalRowHeight}px`;
+		inner.style.maxWidth = `${actualWidth}px`;
+		this.listHeight = height;
+
+		// Popover positioning: bottom-left / top-left of the adjusted target bounds
+		const offsetY = this.host.offsetY?.() ?? 0;
+		const { scrollY } = window;
+		const adjusted = {
+			top: targetBounds.top + scrollY + INPUT_HEIGHT_OVERLAP,
+			bottom: targetBounds.bottom + scrollY - INPUT_HEIGHT_OVERLAP,
+			left: anchorLeft - INPUT_WIDTH_OVERFLOW,
+		};
+		const contentRect = content.getBoundingClientRect();
+		let top = isPopoverAbove ? adjusted.top - contentRect.height + offsetY : adjusted.bottom + offsetY;
+		let left = adjusted.left;
+		// keepInBounds (allowanceX = -INPUT_WIDTH_OVERFLOW, allowanceY = 10)
+		const boundaries = {
+			top: scrollY + POPOVER_ALLOWANCE_Y,
+			right: window.innerWidth + INPUT_WIDTH_OVERFLOW,
+			bottom: scrollY + window.innerHeight - POPOVER_ALLOWANCE_Y,
+			left: -INPUT_WIDTH_OVERFLOW,
+		};
+		if (left < boundaries.left) left = boundaries.left;
+		else if (left + contentRect.width > boundaries.right) {
+			left = Math.max(boundaries.left, boundaries.right - contentRect.width);
+		}
+		if (top < boundaries.top) top = boundaries.top;
+		else if (top + contentRect.height > boundaries.bottom) {
+			top = Math.max(boundaries.top, boundaries.bottom - contentRect.height);
+		}
+		content.style.left = `${left}px`;
+		content.style.top = `${top}px`;
+	}
+
+	scrollToRow(index) {
+		const grid = this.portal?.grid;
+		if (!grid) return;
+		const rowTop = index * DEFAULT_ROW_HEIGHT;
+		const rowBottom = rowTop + DEFAULT_ROW_HEIGHT;
+		const height = this.listHeight ?? MAX_LIST_HEIGHT;
+		if (rowTop < grid.scrollTop) grid.scrollTop = rowTop;
+		else if (rowBottom > grid.scrollTop + height) grid.scrollTop = rowBottom - height;
+	}
+
+	/* ---------- active row helpers ---------- */
+
+	getActiveRowIndex() {
+		const { initialActiveOption } = this.state;
+		if (!initialActiveOption) return undefined;
+		const index = this.getRows().findIndex((option) => option.value === initialActiveOption.value);
+		return index >= 0 ? index : undefined;
+	}
+
+	getPseudoActiveRowIndex(activeRowIndex) {
+		if (this.isInsideForm) return undefined;
+		if (typeof activeRowIndex === 'number') return undefined;
+		const rows = this.getRows();
+		if (!rows.length) return undefined;
+		return rows[0].isDisabled ? undefined : 0;
+	}
+
+	getNextActiveRowIndex(current) {
+		const rows = this.getRows();
+		if (!rows.length) return -1;
+		if (current === rows.length - 1) return -1;
+		const start = typeof current === 'number' ? current + 1 : 0;
+		return start < rows.length ? start : -1;
+	}
+
+	getPreviousActiveRowIndex(current) {
+		if (current === 0) return -1;
+		const rows = this.getRows();
+		if (!rows.length) return -1;
+		const start = typeof current === 'number' ? current - 1 : rows.length - 1;
+		return start >= 0 ? start : -1;
+	}
+
+	clearActive() {
+		this.host.setSelectState({
+			activeRowIndex: undefined,
+			pseudoActiveRowIndex: this.getPseudoActiveRowIndex(undefined),
+		});
+	}
+
+	moveTo(index) {
+		this.host.setSelectState({ activeRowIndex: index, pseudoActiveRowIndex: undefined });
+		// Mouse move is disabled while navigating by keyboard, re-enabled 200ms after the last key
+		clearTimeout(this.enableMouseMoveTimer);
+		this.enableMouseMoveTimer = setTimeout(() => {
+			this.isMouseMoveEnabled = true;
+		}, 200);
+		this.scrollToRow(index);
+	}
+
+	/* ---------- key commands (Mousetrap on document) ---------- */
+
+	shouldInterceptKeyEvent(e) {
+		const target = e.target;
+		if (!(target instanceof Element)) return false;
+		if (target.hasAttribute('aria-autocomplete')) return true;
+		if (target.hasAttribute('aria-haspopup')) return true;
+		return !!this.portal?.listBody.contains(target);
+	}
+
+	onDocumentKeyDown(e) {
+		if (!this.mounted || e.keyCode === 229) return;
+		switch (comboFor(e)) {
+			case 'down':
+				return this.onArrowDown(e);
+			case 'up':
+				return this.onArrowUp(e);
+			case 'enter':
+				return this.onEnter(e);
+			case 'alt+up':
+			case 'alt+down':
+				return this.onAltArrowUpOrDown(e);
+			case 'tab':
+				return this.onTab(e);
+			case 'shift+tab':
+				return this.onShiftTab(e);
+			default:
+		}
+	}
+
+	onArrowDown(e) {
+		this.isMouseMoveEnabled = false;
+		if (!this.shouldInterceptKeyEvent(e)) return;
+		const { isExpanded, activeRowIndex } = this.state;
+		if (isExpanded) e.preventDefault();
+		const next = this.getNextActiveRowIndex(activeRowIndex);
+		if (next === -1) {
+			this.clearActive(); // shouldWrap
+			return;
+		}
+		this.moveTo(next);
+	}
+
+	onArrowUp(e) {
+		this.isMouseMoveEnabled = false;
+		if (!this.shouldInterceptKeyEvent(e)) return;
+		const { isExpanded, activeRowIndex } = this.state;
+		if (isExpanded) e.preventDefault();
+		const prev = this.getPreviousActiveRowIndex(activeRowIndex);
+		if (prev === -1) {
+			this.clearActive(); // shouldWrap
+			return;
+		}
+		this.moveTo(prev);
+	}
+
+	getEffectiveActiveOption() {
+		const { activeRowIndex, pseudoActiveRowIndex } = this.state;
+		const index = activeRowIndex ?? pseudoActiveRowIndex;
+		return typeof index === 'number' ? this.getRows()[index] : undefined;
+	}
+
+	onEnter(e) {
+		if (!this.shouldInterceptKeyEvent(e)) return;
+		e.preventDefault();
+		const activeOption = this.getEffectiveActiveOption() || this.state.initialActiveOption;
+		if (activeOption && activeOption.isDisabled) return;
+		this.handleSelectionChange(activeOption);
+	}
+
+	onAltArrowUpOrDown(e) {
+		if (!this.shouldInterceptKeyEvent(e)) return;
+		if (!this.state.isExpanded) return;
+		e.stopPropagation();
+		e.preventDefault();
+		this.closeOptionsList(); // multiSelectMode only closes
+	}
+
+	onTab(e) {
+		if (!this.shouldInterceptKeyEvent(e)) return;
+		if (!this.state.isExpanded) return;
+		const activeOption = this.getEffectiveActiveOption();
+		if (this.host.advanceFocusOnTab) {
+			if (activeOption && !activeOption.isDisabled) {
+				this.handleSelectionChange(activeOption, { viaTab: true });
+			}
+			this.closeOptionsList();
+			return;
+		}
+		e.preventDefault();
+		this.handleSelectionChange(activeOption);
+	}
+
+	onShiftTab(e) {
+		if (!this.shouldInterceptKeyEvent(e)) return;
+		if (this.state.isExpanded) this.closeOptionsList();
+	}
+
+	/* ---------- mouse ---------- */
+
+	onMouseEnteredOption(index) {
+		if (!this.isMouseMoveEnabled) return;
+		const option = this.getRows()[index];
+		this.host.setSelectState({
+			activeRowIndex: option?.isDisabled ? undefined : index,
+			pseudoActiveRowIndex: undefined,
+		});
+	}
+
+	onMouseLeftOption() {
+		if (!this.isMouseMoveEnabled) return;
+		this.clearActive();
+	}
+
+	onOptionClicked(option) {
+		this.handleSelectionChange(option, { isOptionClicked: !option?.isDisabled });
+	}
+
+	/* ---------- selection ---------- */
+
+	handleSelectionChange(option, { isOptionClicked = false, viaTab = false } = {}) {
+		if (!option || option.isDisabled) return;
+		const { selectedOptions } = this.state;
+		const isSelected = this.isOptionSelected(option);
+		if (!isSelected && selectedOptions) {
+			this.host.setSelectState(
+				{
+					selectedOptions: [...selectedOptions, option],
+					activeRowIndex: undefined,
+					pseudoActiveRowIndex: undefined,
+					filterQuery: '',
+					isExpanded: false,
+				},
+				() => this.host.onSelectionChange?.(option, isOptionClicked, viaTab),
+			);
+		}
+		// shouldAllowUnselectInMultiSelectMode is off, so re-choosing a selected option does nothing
+		this.host.inputEl()?.focus();
+	}
+
+	closeOptionsList() {
+		this.host.onOptionsListClose?.();
+		this.host.setSelectState({
+			isExpanded: false,
+			activeRowIndex: undefined,
+			pseudoActiveRowIndex: undefined,
+			...(this.host.persistFilterQueryOnClose ? {} : { filterQuery: '' }),
+		});
+	}
+
+	/* ---------- popover overlay (click away) ---------- */
+
+	onOverlayMouseDown(e) {
+		this.overlayMouseDownTarget = e.target;
+	}
+
+	onOverlayClick(e) {
+		// ReactModal only requests close for a press that started and ended on the overlay itself
+		const startedOnOverlay = this.overlayMouseDownTarget === this.portal?.overlay;
+		this.overlayMouseDownTarget = null;
+		if (!this.portal || e.target !== this.portal.overlay || !startedOnOverlay) return;
+		if (!this.state.isExpanded) return;
+		const region = this.host.clickRegionEl();
+		let clickedInput;
+		if (region) {
+			const rect = region.getBoundingClientRect();
+			clickedInput =
+				e.clientX > rect.left && e.clientX < rect.right && e.clientY > rect.top && e.clientY < rect.bottom;
+		}
+		this.host.inputEl()?.focus();
+		this.host.onOptionsListClose?.(clickedInput);
+		this.host.setSelectState({
+			isExpanded: false,
+			activeRowIndex: undefined,
+			...(this.host.persistFilterQueryOnClose ? {} : { filterQuery: '' }),
+		});
+	}
+}
+
+/* ==========================================================================
+   Markup shared by both previews
+   ========================================================================== */
+
+const CLOSE_SVG =
+	'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" data-sk-icon="true" data-qa="close" aria-hidden="true" class=""><path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M16.53 3.47a.75.75 0 0 1 0 1.06L11.06 10l5.47 5.47a.75.75 0 0 1-1.06 1.06L10 11.06l-5.47 5.47a.75.75 0 0 1-1.06-1.06L8.94 10 3.47 4.53a.75.75 0 0 1 1.06-1.06L10 8.94l5.47-5.47a.75.75 0 0 1 1.06 0"/></svg>';
+
+const WARNING_SVG =
+	'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" data-sk-icon="true" data-qa="warning" aria-hidden="true" class="is-inline"><g fill="currentColor"><path d="M10 12.75a1 1 0 1 1 0 2 1 1 0 0 1 0-2m0-6a.75.75 0 0 1 .75.75V11a.75.75 0 0 1-1.5 0V7.5a.75.75 0 0 1 .75-.75"/><path fill-rule="evenodd" clip-rule="evenodd" d="M7.712 3.542c1.02-1.723 3.556-1.723 4.576 0l6.1 10.303c1.043 1.761-.28 3.905-2.287 3.905H3.899c-2.007 0-3.33-2.144-2.288-3.905zm3.285.765c-.44-.742-1.554-.742-1.994 0l-6.1 10.302c-.418.704.084 1.641.996 1.641h12.202c.912 0 1.414-.937.997-1.642z"/></g></svg>';
+
+const CHECK_SMALL_SVG =
+	'<svg class="c-select_options_list__selected-svg" aria-hidden="true" viewBox="0 0 2000 2000" width="15" height="15" fill="currentColor"><path d="M809 1450C832 1450 852 1440 866 1423L1478 699C1489 686 1495 671 1495 652C1495 629 1486 609 1468 594C1453 582 1439 577 1419 577C1396 577 1376 586 1363 603L816 1252L641 1004C627 984 606 973 580 973C563 973 550 977 536 986C515 999 505 1021 505 1046C505 1062 509 1076 519 1091L747 1417C763 1438 783 1450 809 1450Z"/></svg>';
+
+const KEYBOARD_KEY_ENTER_HTML =
+	'<div aria-hidden="true" aria-label="enter" class="sk-kbd sk-kbd--slim sk-kbd--flush" role="img">Enter</div>';
+
+// FieldErrors -> InlineAlert. The message also goes to the assertive announcer, like AsAnnouncerAPIMessage.
+function renderFieldErrorHtml({ id, message }) {
+	return `<div data-qa="error" class="c-inline_alert c-field_input__helpers" id="${escapeHtml(id)}">${WARNING_SVG}&nbsp;<div style="display: contents;">${escapeHtml(message)}</div></div>`;
+}
+const announcedErrors = new Set();
+function announceErrors(errors) {
+	(errors || []).forEach(({ id, message }) => {
+		const key = `${id}:${message}`;
+		if (announcedErrors.has(key)) return;
+		announcedErrors.add(key);
+		announcer.send({ message, assertive: true });
+	});
+	if (!errors?.length) announcedErrors.clear();
+}
+
+// Plain-label Token (js/modern/slack-kit/token/token.tsx renderPlainToken)
+function renderTokenHtml(option, { extraClass = '', removeClass, isDisabled, tokenAttrs = '', removeAttrs = '' }) {
+	const classes = ['c-token', extraClass, 'c-token--large', isDisabled && 'c-token--disabled'].filter(Boolean).join(' ');
+	return `<span class="${classes}" data-qa="multi_select_token_wrapper"${tokenAttrs} contenteditable="false"><span class="c-token__content" data-qa="token_content"><span class="c-token_content__inner"><span class="c-truncate c-truncate--break_words" style="--lines: 1; word-break: break-all;" data-sk="tooltip_parent"><span class="c-token_content__label" data-qa="token_plain_label">${escapeHtml(option.label)}</span></span><span hidden data-sk="tooltip"></span></span></span>${
+		isDisabled ? '' : `<span class="${removeClass}" data-qa="token_remove_icon"${removeAttrs}>${CLOSE_SVG}</span>`
+	}</span>`;
+}
+
+function renderModalHtml({ titleId, checkboxId, descriptionId }) {
+	return `
+<div class="ReactModal__Overlay c-sk-overlay" style="padding: 28px;">
+	<div class="ReactModal__Content ReactModal__Content--after-open c-sk-modal c-sk-modal--fixed c-sk-modal--responsive" tabindex="-1" role="dialog" aria-labelledby="${titleId}" aria-modal="true">
+		<div class="c-sk-modal_header ">
+			<div id="${titleId}" class="c-sk-modal_title_bar c-sk-modal_title_bar--close_button_visible">
+				<div class="c-sk-modal_title_bar__text "><h1 class="">${escapeHtml(MODAL_TITLE)}</h1></div>
+			</div>
+		</div>
+		<div data-qa="sk-modal-content" class="c-sk-modal_content">
+			<div role="presentation" class="c-scrollbar c-scrollbar--hidden c-scrollbar--inherit_size">
+				<div data-qa="slack_kit_scrollbar" role="presentation" class="c-scrollbar__hider">
+					<div role="presentation" class="c-scrollbar__child">
+						<div class="c-sk-modal_content__inner" data-qa="modal-content-inner">
+							<div class="c-sk-modal_content_section ">
+								<label for="${checkboxId}" class="c-label c-label--inline c-label--pointer" data-qa-label="true" data-qa-label-type="inline"><span class="c-label__text" data-qa-label-text="true">${escapeHtml(SHOW_TRANSLATE_BUTTON_LABEL)}</span><span class="c-label__children" data-qa-label-children="true"><input id="${checkboxId}" name="${checkboxId}" type="checkbox" class="c-input_checkbox" checked></span></label>
+							</div>
+							<div class="c-sk-modal_content_section ">
+								<div class="padding_top_100 margin_bottom_50">
+									<div data-select-mount></div>
+									<p id="${descriptionId}" class="sk_foreground_max">${escapeHtml(LANGUAGES_DESCRIPTION)}</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div role="presentation" class="c-scrollbar__track"><div role="presentation" class="c-scrollbar__bar" tabindex="-1" style="height: 0px; transform: translateY(0px);"></div></div>
+			</div>
+		</div>
+		<div class="c-sk-modal_footer">
+			<div class="c-sk-modal_footer_actions">
+				<button class="c-button c-button--outline c-button--medium" type="button" data-qa="cancel_button">${escapeHtml(CANCEL_LABEL)}</button>
+				<button class="c-button c-button--primary c-button--medium" type="button" data-qa="submit_button">${escapeHtml(SUBMIT_LABEL)}</button>
+			</div>
+		</div>
+		<button class="c-button-unstyled c-icon_button c-icon_button--size_medium c-sk-modal__close_button c-icon_button--default" aria-label="Close" data-qa="sk_close_modal_button" type="button">${CLOSE_SVG}</button>
+	</div>
+</div>`;
+}
+
+/* FocusEventManager: whether the user is driving the page with the keyboard. Buttons and the
+   checkbox show their focus rings only in keyboard mode; v1 also uses it to select all tokens. */
+const KEYBOARD_NAVIGATION_KEYS = ['Tab', 'F6', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+const keyboardMode = (() => {
+	const mode = { value: false, relatedEvent: null, listeners: new Set() };
+	const isInputElement = (el) =>
+		el.nodeName === 'INPUT' || el.nodeName === 'SELECT' || el.nodeName === 'TEXTAREA' || el.isContentEditable;
+	const syncFocusVisibleClasses = () => {
+		document.querySelectorAll('.c-button, .c-icon_button').forEach((el) => {
+			el.classList.toggle('c-button--focus-visible', mode.value);
+		});
+		document.querySelectorAll('.c-input_checkbox').forEach((el) => {
+			el.classList.toggle('c-input_checkbox--focus-visible', mode.value);
+		});
+	};
+	const setValue = (value) => {
+		if (value === mode.value) return;
+		mode.value = value;
+		syncFocusVisibleClasses();
+		mode.listeners.forEach((listener) => listener(value));
+	};
+	mode.sync = syncFocusVisibleClasses;
+	document.addEventListener('keydown', ({ type, key, shiftKey }) => {
+		mode.relatedEvent = { type, key, shiftKey };
+	}, true);
+	document.addEventListener('mousedown', ({ type, ctrlKey }) => {
+		if (isMac() && mode.value && ctrlKey) return;
+		mode.relatedEvent = { type };
+		setValue(false);
+	}, true);
+	document.addEventListener('focus', ({ target }) => {
+		const { relatedEvent } = mode;
+		const isKbNavEvent = relatedEvent?.type === 'keydown' && KEYBOARD_NAVIGATION_KEYS.includes(relatedEvent.key);
+		if (relatedEvent?.type === 'keydown' && mode.value) return;
+		if (target instanceof Element && isInputElement(target)) return;
+		const next = isKbNavEvent || (mode.value && !relatedEvent);
+		mode.relatedEvent = null;
+		setValue(next);
+	}, true);
+	window.addEventListener('blur', () => {
+		mode.relatedEvent = null;
+	});
+	return mode;
+})();
+
+/* ==========================================================================
+   Legacy MultiSelect (MultiSelect -> ControlledMultiSelect -> MultiSelectInput)
+   port. Editable tokens, paste-to-tokenize, loading and per-token states are
+   omitted since this consumer doesn't use them.
+   ========================================================================== */
+
+const ASCII_CHARACTERS = new Array(95).fill('').map((_v, i) => String.fromCharCode(i + 32));
+// CSS-module classes from _common.multi_select_input.module.less (hashed in the real build)
+const V1_CLASSES = {
+	multiSelectInput: 'ms1-multiSelectInput',
+	large: 'ms1-large',
+	initial: 'ms1-initial',
+	focused: 'ms1-focused',
+	invalid: 'ms1-invalid',
+	disabled: 'ms1-disabled',
+	input: 'ms1-input',
+	space: 'ms1-space',
+	filterQuery: 'ms1-filterQuery',
+	placeholder: 'ms1-placeholder',
+	token: 'ms1-token',
+	removeToken: 'ms1-removeToken',
+	removeTokenSelected: 'ms1-removeTokenSelected',
+	formSizeLarge: 'c-form--large',
+};
+
+const renderV1TokenHtml = (option, { isDisabled }) =>
+	renderTokenHtml(option, {
+		extraClass: V1_CLASSES.token,
+		removeClass: V1_CLASSES.removeToken,
+		isDisabled,
+		tokenAttrs: ' tabindex="-1"',
+	});
+
+const setV1TokenSelected = (token, isSelected) => {
+	token.classList.toggle('c-token--selected', isSelected);
+	token.querySelector('[data-qa="token_remove_icon"]')?.classList.toggle(V1_CLASSES.removeTokenSelected, isSelected);
+};
+
+function createMultiSelectV1(mountEl, props) {
+	const { selectId, ariaLabel, ariaDescribedBy, placeholderText, options, initialSelectedOptions, onSelectedItemsChange } =
+		props;
+	let isDisabled = !!props.isDisabled;
+	let errors = props.errors;
+
+	const store = createStore(
+		{
+			// MultiSelect select state
+			filterQuery: '',
+			options,
+			isExpanded: false,
+			selectedOptions: initialSelectedOptions,
+			selectedTokenIndexes: [],
+			activeRowIndex: undefined,
+			pseudoActiveRowIndex: undefined,
+			// MultiSelectInput UI state
+			focused: false,
+			composing: false,
+			// withKeyboardFocusProps
+			hasKeyboardFocus: false,
+		},
+		(prev, next) => commit(prev, next),
+	);
+	const { batched } = store;
+	const s = () => ({ ...store.get(), isDisabled, isInvalid: !!errors?.length, isRequired: true, selectId });
+
+	// MultiSelect.setSelectState: filter the options when the query changes
+	const setSelectState = (changes, callback) => {
+		store.set((prevState) => {
+			if (!changes) return null;
+			const next = { ...changes };
+			if (next.filterQuery !== undefined && next.filterQuery !== prevState.filterQuery) {
+				next.options = defaultFilter(options, next.filterQuery);
+			}
+			return next;
+		}, callback);
+	};
+
+	// Instance fields
+	let caretPosInFilterQuery = -1;
+	let ignoreSelectionChange = false;
+	let updateSelectionOnKeyUp = false;
+	let mouseDownOnToken = false;
+	let backspaceWasPressed = false;
+	let leftArrowKeyWasPressed = false;
+	let shouldMoveCursorToFilterQuery = false;
+	let selectStateAfterMutation = null;
+	let inputHeight = null;
+	let mutationObserver = null;
+
+	/* ---------- DOM ---------- */
+	const root = document.createElement('div');
+	root.className = 'c-multi-select';
+	root.dataset.qa = selectId;
+	mountEl.appendChild(root);
+	const additionalInfo = document.createElement('div');
+	additionalInfo.className = 'flow_root';
+
+	let inputContainer;
+	let input;
+	let filterQueryEl;
+	let trailingSpace;
+	let placeholderEl;
+	let tokensKey = null;
+	let tokenEls = [];
+
+	function buildInput() {
+		inputContainer?.remove();
+		tokensKey = null;
+		tokenEls = [];
+		inputContainer = document.createElement('div');
+		inputContainer.dataset.qa = 'multi_select_input';
+		inputContainer.style.cssText = 'width: 100%; max-height: 96px;';
+		input = document.createElement('div');
+		input.setAttribute('role', 'combobox');
+		input.setAttribute('aria-autocomplete', 'list');
+		input.setAttribute('aria-controls', buddyId(selectId, 'listbox'));
+		input.setAttribute('aria-label', ariaLabel);
+		input.setAttribute('aria-multiline', 'false');
+		input.id = selectId;
+		input.className = V1_CLASSES.input;
+		input.dataset.qa = `${selectId}-input`;
+		const leadingSpace = makeSpace();
+		filterQueryEl = document.createElement('span');
+		filterQueryEl.className = V1_CLASSES.filterQuery;
+		filterQueryEl.dataset.qa = 'multi_select_filter_query';
+		trailingSpace = makeSpace(false);
+		input.append(leadingSpace, filterQueryEl, trailingSpace);
+		inputContainer.appendChild(input);
+		root.insertBefore(inputContainer, root.firstChild);
+		if (!additionalInfo.parentNode) root.appendChild(additionalInfo);
+		placeholderEl = null;
+
+		inputContainer.addEventListener('mousedown', batched(onInputContainerMouseDown));
+		filterQueryEl.addEventListener('mousedown', batched(onFilterQueryMouseDown));
+		input.addEventListener('focus', batched(onFocus));
+		input.addEventListener('blur', batched(onBlur));
+		input.addEventListener('input', batched(onChange));
+		input.addEventListener('compositionstart', batched(() => !isDisabled && store.set({ composing: true })));
+		input.addEventListener('compositionend', batched(onCompositionEnd));
+		input.addEventListener('paste', batched(onPaste));
+		input.addEventListener('keydown', batched(onKeyDown));
+		input.addEventListener('keyup', batched(onKeyUp));
+		input.addEventListener('cut', batched(onCut));
+		input.addEventListener('mouseup', batched(maybeFireSelect));
+		input.addEventListener('keyup', batched(maybeFireSelect));
+		input.addEventListener('keydown', batched(maybeFireSelect));
+	}
+
+	function makeSpace(contentEditable) {
+		const span = document.createElement('span');
+		span.className = V1_CLASSES.space;
+		span.dataset.qa = 'multi_select_space';
+		if (contentEditable === false) span.setAttribute('contenteditable', 'false');
+		span.textContent = ' ';
+		return span;
+	}
+
+	/* ---------- React onSelect emulation ---------- */
+	let lastSelection = null;
+	let mouseIsDown = false;
+	function maybeFireSelect(e) {
+		if (e?.type === 'mouseup') mouseIsDown = false;
+		if (isDisabled || mouseIsDown || document.activeElement !== input) return;
+		const selection = window.getSelection();
+		const snapshot = selection.rangeCount
+			? [selection.anchorNode, selection.anchorOffset, selection.focusNode, selection.focusOffset]
+			: null;
+		if (lastSelection && snapshot && snapshot.every((v, i) => v === lastSelection[i])) return;
+		lastSelection = snapshot;
+		onSelectionChange();
+	}
+	const onDocumentSelectionChange = batched(() => maybeFireSelect());
+	const onDocumentMouseDown = () => {
+		mouseIsDown = true;
+	};
+	const onDocumentMouseUp = () => {
+		setTimeout(() => {
+			mouseIsDown = false;
+		});
+	};
+	document.addEventListener('selectionchange', onDocumentSelectionChange);
+	document.addEventListener('mousedown', onDocumentMouseDown);
+	document.addEventListener('mouseup', onDocumentMouseUp);
+	// withKeyboardFocusProps re-evaluates when keyboard mode flips while the input has focus
+	const onKeyboardModeChange = batched((value) => {
+		if (!value) store.set({ hasKeyboardFocus: false });
+		else if (document.activeElement === input) store.set({ hasKeyboardFocus: true });
+	});
+	keyboardMode.listeners.add(onKeyboardModeChange);
+
+	/* ---------- helpers ---------- */
+	const getTokensAsArray = () => Array.from(input.querySelectorAll('.c-token'));
+	const getSelectedTokenIndexes = () => s().selectedTokenIndexes || [];
+	const haveSelectedTokens = () => !!getSelectedTokenIndexes().length;
+	const allTokensAreSelected = () => {
+		const selected = getSelectedTokenIndexes();
+		return selected.length > 0 && selected.length === getTokensAsArray().length;
+	};
+	const focusInput = () => input.focus();
+
+	const setSelectedTokenIndexes = (selectedTokenIndexes, { initiator } = {}) => {
+		if (initiator === 'keydown') {
+			updateSelectionOnKeyUp = true;
+			ignoreSelectionChange = true;
+		}
+		setSelectState({ selectedTokenIndexes });
+	};
+	const deselectAllTokens = () => setSelectedTokenIndexes([]);
+
+	const getSelectedFilterQueryText = () => {
+		const { filterQuery } = s();
+		if (filterQuery?.length === 0) return '';
+		const selection = window.getSelection();
+		const selectedText = selection?.toString();
+		if (!selection?.containsNode(filterQueryEl, true)) return '';
+		const pieces = selectedText?.split('\n');
+		return pieces?.length ? pieces[pieces.length - 1].trim() : '';
+	};
+	const isEntireFilterQuerySelected = () => {
+		const selectedText = getSelectedFilterQueryText();
+		return !!selectedText && selectedText === s().filterQuery;
+	};
+	const isCaretOutSideFilterQuery = () => !filterQueryEl.contains(window.getSelection()?.anchorNode ?? null);
+	const isCaretAtStartOfFilterQuery = () => {
+		if (isCaretOutSideFilterQuery()) return false;
+		if (!s().filterQuery) return true;
+		return window.getSelection()?.anchorOffset === 0;
+	};
+	const isRangeSelectionOfFilterQueryComplete = (anchorOffset) => {
+		const selectedText = getSelectedFilterQueryText();
+		if (!selectedText) return false;
+		const { filterQuery } = s();
+		if (!filterQuery || !anchorOffset) return false;
+		return selectedText.substr(0, anchorOffset) === filterQuery.substr(0, anchorOffset);
+	};
+
+	const saveCaretPosInFilterQuery = () => {
+		caretPosInFilterQuery = window.getSelection()?.anchorOffset;
+	};
+	const determineCaretPosInFilterQuery = () => {
+		const { filterQuery } = s();
+		if (caretPosInFilterQuery === -1) return 0;
+		if (!filterQuery) return 0;
+		if (typeof caretPosInFilterQuery === 'number' && caretPosInFilterQuery > filterQuery.length) {
+			return filterQuery.length;
+		}
+		return caretPosInFilterQuery;
+	};
+	const updateCaretPosInFilterQuery = () => {
+		const range = document.createRange();
+		const selection = window.getSelection();
+		selection?.removeAllRanges();
+		const offset = determineCaretPosInFilterQuery();
+		if (typeof offset === 'number') range.setStart(filterQueryEl.firstChild || filterQueryEl, offset);
+		range.collapse(true);
+		selection?.addRange(range);
+	};
+	const moveCursorToFilterQuery = ({ cursorAtStart } = { cursorAtStart: false }) => {
+		const range = document.createRange();
+		const selection = window.getSelection();
+		selection?.removeAllRanges();
+		const node = filterQueryEl.firstChild || filterQueryEl;
+		const offset = cursorAtStart ? 0 : filterQueryEl.textContent?.trim()?.length;
+		if (node && typeof offset === 'number') range.setStart(node, offset);
+		range.collapse(true);
+		selection?.addRange(range);
+	};
+	const scrollFilterQueryIntoView = (scrollToEmpty = true) => {
+		if (!scrollToEmpty && !filterQueryEl.textContent) return;
+		filterQueryEl.scrollIntoView?.({ block: 'nearest' });
+	};
+	const moveCursorAndScrollToFilterQuery = (scrollToEmpty = true) => {
+		scrollFilterQueryIntoView(scrollToEmpty);
+		moveCursorToFilterQuery();
+	};
+	const scrollSelectedTokenIntoView = () => {
+		const selected = getSelectedTokenIndexes();
+		if (!selected.length) return;
+		getTokensAsArray()[selected[selected.length - 1]]?.scrollIntoView?.({ block: 'nearest' });
+	};
+	const selectAllTokens = () => {
+		const tokens = getTokensAsArray();
+		if (!tokens.length) return;
+		const selection = window.getSelection();
+		const range = document.createRange();
+		selection?.removeAllRanges();
+		range.setStartBefore(tokens[0]);
+		range.setEndAfter(tokens[tokens.length - 1]);
+		selection?.addRange(range);
+	};
+	const selectTextInNode = (node) => {
+		if (!node) return;
+		const selection = window.getSelection();
+		const range = document.createRange();
+		ignoreSelectionChange = true;
+		selection?.removeAllRanges();
+		range.selectNode(isMac() ? node : node.querySelector('.c-token__content') || node);
+		ignoreSelectionChange = true;
+		selection?.addRange(range);
+	};
+
+	const removeToken = (itemIndex) => {
+		const { selectedOptions } = s();
+		setSelectState({
+			selectedOptions: selectedOptions.filter((_o, i) => i !== itemIndex),
+			selectedTokenIndexes: [],
+		});
+	};
+
+	const expandOptionsList = () => {}; // expandOnFocus is off
+
+	/* ---------- handlers ---------- */
+	function onFocus(e) {
+		store.set({ focused: true });
+		expandOptionsList();
+		if (!mouseDownOnToken) moveCursorAndScrollToFilterQuery();
+		mouseDownOnToken = false;
+		// withKeyboardFocusProps: focus arriving in keyboard mode
+		if (keyboardMode.value && e.target === input) store.set({ hasKeyboardFocus: true });
+	}
+
+	function onBlur(e) {
+		const { filterQuery, isExpanded } = s();
+		store.set({ focused: false });
+		deselectAllTokens();
+		if (filterQuery && !isExpanded) setSelectState({ filterQuery: '' });
+		caretPosInFilterQuery = -1;
+		mouseDownOnToken = false;
+		if (!input.contains(e.relatedTarget)) store.set({ hasKeyboardFocus: false });
+	}
+
+	function onChange() {
+		if (s().composing) return;
+		onFilterQueryChanged();
+	}
+
+	function onCompositionEnd() {
+		if (isDisabled) return;
+		store.set({ composing: false });
+		onFilterQueryChanged();
+	}
+
+	function onFilterQueryChanged() {
+		const filterQueryText = filterQueryEl.textContent;
+		const filterQueryEdited = s().filterQuery !== filterQueryText;
+		if (backspaceWasPressed && !filterQueryEdited) {
+			backspaceWasPressed = false;
+			return;
+		}
+		const isExpanded = filterQueryText ? filterQueryText.length > 0 : false;
+		saveCaretPosInFilterQuery();
+		setSelectState({ filterQuery: filterQueryText, isExpanded });
+	}
+
+	function onCaretSelectionChange() {
+		if (isCaretOutSideFilterQuery()) updateCaretPosInFilterQuery();
+		else saveCaretPosInFilterQuery();
+	}
+
+	function onRangeSelectionChange() {
+		const selection = window.getSelection();
+		const range = selection?.getRangeAt(0);
+		const tokens = getTokensAsArray();
+		const { filterQuery } = s();
+		const selectedTokenIndexes = tokens.reduce(
+			(acc, token, i) => (selection?.containsNode(token) ? [...acc, i] : acc),
+			[],
+		);
+		const areTokensSelected = selectedTokenIndexes.length > 0;
+
+		if (!filterQuery && !areTokensSelected && !selection?.isCollapsed) {
+			ignoreSelectionChange = true;
+			selection?.collapseToEnd();
+			return;
+		}
+		if (isEntireFilterQuerySelected() && !areTokensSelected) {
+			ignoreSelectionChange = true;
+			range?.setStartBefore(filterQueryEl.firstChild);
+			return;
+		}
+		const firstSelectedToken = tokens[selectedTokenIndexes[0]];
+		const lastSelectedToken = tokens[selectedTokenIndexes[selectedTokenIndexes.length - 1]];
+		if (!filterQuery && areTokensSelected) {
+			ignoreSelectionChange = true;
+			range?.setStartBefore(firstSelectedToken);
+			ignoreSelectionChange = true;
+			range?.setEndAfter(lastSelectedToken);
+			setSelectedTokenIndexes(selectedTokenIndexes);
+			return;
+		}
+		if (isEntireFilterQuerySelected() && areTokensSelected) {
+			ignoreSelectionChange = true;
+			range?.setStartBefore(firstSelectedToken);
+			setSelectedTokenIndexes(selectedTokenIndexes);
+		}
+	}
+
+	function onSelectionChange() {
+		if (ignoreSelectionChange) {
+			ignoreSelectionChange = false;
+			return;
+		}
+		const type = window.getSelection()?.type;
+		if (type === 'Caret') onCaretSelectionChange();
+		if (type === 'Range') onRangeSelectionChange();
+	}
+
+	function onKeyDown(e) {
+		if (isDisabled || s().composing) return;
+		const { key, ctrlKey, metaKey, altKey, shiftKey } = e;
+		const isCtrlKeyPress = isMac() ? metaKey : ctrlKey;
+		const isWordDeleteShortcut = key === 'Delete' && ((isMac() && altKey) || (!isMac() && isCtrlKeyPress));
+
+		if (key === 'Backspace' || isWordDeleteShortcut) onBackspace(e);
+		if (!isWordDeleteShortcut && key === 'Delete') onDelete(e);
+		if (key === 'Escape') onEscape(e);
+		if (key === 'Home' || (metaKey && !shiftKey && key === 'ArrowLeft') || (metaKey && !shiftKey && key === 'ArrowUp')) {
+			onHome(e);
+		}
+		if (key === 'End' || (metaKey && !shiftKey && key === 'ArrowRight') || (metaKey && !shiftKey && key === 'ArrowDown')) {
+			onEnd(e);
+		}
+		if (!metaKey && key === 'ArrowLeft' && !leftArrowKeyWasPressed) {
+			leftArrowKeyWasPressed = true;
+			onLeftArrow(e);
+		}
+		if (!metaKey && key === 'ArrowRight') onRightArrow(e);
+		if (key === 'Tab') onTab(e);
+		if (key === 'ArrowUp' || key === 'ArrowDown') e.preventDefault();
+		if (key === 'ArrowDown' && !metaKey && !shiftKey) expandOptionsList();
+		if (key === 'Enter') e.preventDefault();
+		if (!isCtrlKeyPress && ASCII_CHARACTERS.includes(key)) onCharacterKey();
+		if (key === 'F6' || ((ctrlKey || metaKey) && key === '`')) onF6();
+	}
+
+	function onHome(e) {
+		e.preventDefault();
+		if (s().selectedOptions?.length) setSelectedTokenIndexes([0], { initiator: e.type });
+		else moveCursorToFilterQuery({ cursorAtStart: true });
+	}
+
+	function onEnd(e) {
+		e.preventDefault();
+		if (getSelectedTokenIndexes().length) deselectAllTokens();
+		moveCursorAndScrollToFilterQuery();
+	}
+
+	function onKeyUp() {
+		if (isDisabled) return;
+		const selectedTokenIndexes = getSelectedTokenIndexes();
+		if (shouldMoveCursorToFilterQuery) {
+			moveCursorToFilterQuery({ cursorAtStart: true });
+			shouldMoveCursorToFilterQuery = false;
+		}
+		if (updateSelectionOnKeyUp && selectedTokenIndexes.length) {
+			selectTextInNode(getTokensAsArray()[selectedTokenIndexes[0]]);
+			updateSelectionOnKeyUp = false;
+		}
+		leftArrowKeyWasPressed = false;
+	}
+
+	function onInputContainerMouseDown(e) {
+		if (isDisabled) return;
+		e.preventDefault();
+		if (haveSelectedTokens()) deselectAllTokens();
+		if (!s().focused) focusInput();
+		else {
+			moveCursorAndScrollToFilterQuery(false);
+			expandOptionsList();
+		}
+	}
+
+	function onPaste(e) {
+		if (isDisabled || !e.clipboardData) return;
+		e.preventDefault();
+		const { filterQuery } = s();
+		const text = e.clipboardData.getData('text');
+		const caret = caretPosInFilterQuery || 0;
+		const existingQuery = filterQuery || '';
+		const pastePosition = caret <= existingQuery.length ? caret : existingQuery.length;
+		const newFilterQuery = existingQuery.slice(0, pastePosition) + text + existingQuery.slice(pastePosition);
+		caretPosInFilterQuery = pastePosition + text.length;
+		setSelectState({ filterQuery: newFilterQuery, isExpanded: newFilterQuery.length > 0 });
+	}
+
+	function onCharacterKey() {
+		if (!haveSelectedTokens()) return;
+		const { filterQuery, selectedOptions } = s();
+		const selectedTokenIndexes = getSelectedTokenIndexes();
+		const nextSelectedOptions = selectedOptions.filter((_o, i) => selectedTokenIndexes.indexOf(i) === -1);
+		const nextFilterQuery = filterQuery?.replace(getSelectedFilterQueryText(), '');
+		setSelectState({ selectedOptions: nextSelectedOptions, selectedTokenIndexes: [], filterQuery: nextFilterQuery });
+		moveCursorToFilterQuery();
+	}
+
+	function onBackspace(e) {
+		const { filterQuery } = s();
+		ignoreSelectionChange = true;
+
+		if (allTokensAreSelected() && (isEntireFilterQuerySelected() || !filterQuery)) {
+			e.preventDefault();
+			setSelectState({ selectedOptions: [], selectedTokenIndexes: [], filterQuery: '', isExpanded: false });
+			return;
+		}
+		if (isEntireFilterQuerySelected()) {
+			e.preventDefault();
+			setSelectState({ filterQuery: '', isExpanded: false });
+			return;
+		}
+		const tokensLength = getTokensAsArray().length;
+		const selectedTokenIndexes = getSelectedTokenIndexes();
+		const caretAtStart = isCaretAtStartOfFilterQuery();
+		backspaceWasPressed = true;
+
+		if (caretAtStart && tokensLength === 0) {
+			e.preventDefault();
+			return;
+		}
+		if (!caretAtStart && !haveSelectedTokens() && filterQuery) return;
+		e.preventDefault();
+		if (!haveSelectedTokens()) {
+			setSelectedTokenIndexes([tokensLength - 1], { initiator: e.type });
+			return;
+		}
+		selectedTokenIndexes.forEach((index) => removeToken(index));
+		const first = selectedTokenIndexes[0];
+		let nextSelectedTokens = null;
+		if (first) nextSelectedTokens = first === 0 ? [0] : [first - 1];
+		if (nextSelectedTokens?.length) setSelectedTokenIndexes(nextSelectedTokens, { initiator: e.type });
+	}
+
+	function onDelete(e) {
+		ignoreSelectionChange = true;
+		if (isEntireFilterQuerySelected()) {
+			e.preventDefault();
+			setSelectState({ filterQuery: '', isExpanded: false });
+			return;
+		}
+		const tokensLength = getTokensAsArray().length;
+		const selectedTokenIndexes = getSelectedTokenIndexes();
+		if (tokensLength === 0 || !haveSelectedTokens()) return;
+		e.preventDefault();
+		selectedTokenIndexes.forEach((index) => removeToken(index));
+		if (!selectedTokenIndexes.length) return;
+		const last = selectedTokenIndexes[selectedTokenIndexes.length - 1];
+		if (last === tokensLength - 1 || selectedTokenIndexes.length === tokensLength) {
+			moveCursorToFilterQuery({ cursorAtStart: true });
+			deselectAllTokens();
+		}
+	}
+
+	function onF6() {
+		if (!s().isExpanded) return;
+		store.set({ focused: false });
+		setSelectState({ isExpanded: false });
+	}
+
+	function onEscape(e) {
+		if (!s().isExpanded) return;
+		// Prevent the esc key from unintentionally closing any modals
+		e.stopPropagation();
+		setSelectState({ isExpanded: false });
+	}
+
+	function onLeftArrow(e) {
+		const tokensLength = getTokensAsArray().length;
+		const selectedTokenIndexes = getSelectedTokenIndexes();
+		const selectedTokenIndex = selectedTokenIndexes.length && selectedTokenIndexes[0];
+		const selection = window.getSelection();
+		const isCaretSelection = selection?.type === 'Caret';
+		const isRangeSelection = selection?.type === 'Range';
+
+		if (e.shiftKey && isRangeSelection && isRangeSelectionOfFilterQueryComplete(selection.anchorOffset)) {
+			e.preventDefault();
+			return;
+		}
+		const caretAtStart = isCaretSelection && isCaretAtStartOfFilterQuery();
+		if (tokensLength === 0 && caretAtStart) {
+			e.preventDefault();
+			return;
+		}
+		if (tokensLength === 0) return;
+		if (allTokensAreSelected()) {
+			setSelectedTokenIndexes([0], { initiator: e.type });
+			return;
+		}
+		if (!haveSelectedTokens() && caretAtStart) {
+			setSelectedTokenIndexes([tokensLength - 1], { initiator: e.type });
+			return;
+		}
+		if (isRangeSelection && haveSelectedTokens() && selectedTokenIndex === 0) {
+			e.preventDefault();
+			return;
+		}
+		if (!haveSelectedTokens()) return;
+		if (typeof selectedTokenIndex === 'number') {
+			setSelectedTokenIndexes([selectedTokenIndex - 1], { initiator: e.type });
+		}
+	}
+
+	function onRightArrow(e) {
+		const isRangeSelection = window.getSelection()?.type === 'Range';
+		const tokensLength = getTokensAsArray().length;
+		const selectedTokenIndexes = getSelectedTokenIndexes();
+		const selectedTokenIndex = selectedTokenIndexes.length && selectedTokenIndexes[0];
+		if (typeof selectedTokenIndex !== 'number') return;
+		const nextToken = isRangeSelection && haveSelectedTokens() && selectedTokenIndex < tokensLength - 1;
+		if ((!nextToken && haveSelectedTokens()) || allTokensAreSelected()) {
+			e.preventDefault();
+			shouldMoveCursorToFilterQuery = true;
+			deselectAllTokens();
+			return;
+		}
+		if (!haveSelectedTokens()) return;
+		setSelectedTokenIndexes([selectedTokenIndex + 1], { initiator: e.type });
+	}
+
+	function onTab(e) {
+		// Shift+Tab blurs out of the input, so close the list. Tab is handled by the options list.
+		if (e.shiftKey) setSelectState({ isExpanded: false });
+	}
+
+	function onTokenMouseDown(e, index) {
+		if (isDisabled) return;
+		e.preventDefault();
+		mouseDownOnToken = true;
+		e.stopPropagation();
+		if (!s().focused) focusInput();
+		selectTextInNode(getTokensAsArray()[index]);
+		if (index !== getSelectedTokenIndexes()[0]) setSelectedTokenIndexes([index]);
+	}
+
+	function onTokenRemoveMouseDown(e, index) {
+		e.preventDefault();
+		mouseDownOnToken = true;
+		e.stopPropagation();
+		if (!s().focused) focusInput();
+		moveCursorToFilterQuery();
+		removeToken(index);
+	}
+
+	function onFilterQueryMouseDown(e) {
+		if (isDisabled) return;
+		if (s().focused && !!filterQueryEl.textContent) e.stopPropagation();
+		if (haveSelectedTokens()) deselectAllTokens();
+	}
+
+	function onPlaceholderMouseDown() {
+		focusInput();
+	}
+
+	function onCut() {
+		const { filterQuery, selectedOptions } = s();
+		const selectedTokenIndexes = getSelectedTokenIndexes();
+		selectStateAfterMutation = {
+			selectedTokenIndexes: [],
+			selectedOptions: selectedOptions.filter((_o, i) => selectedTokenIndexes.indexOf(i) === -1),
+			filterQuery: filterQuery?.replace(getSelectedFilterQueryText(), ''),
+			isExpanded: false,
+		};
+	}
+
+	/* ---------- mutation observer (guards the contenteditable's structure) ---------- */
+	function attachMutationObserver() {
+		mutationObserver = new MutationObserver(batched(onMutation));
+		mutationObserver.observe(input, { subtree: true, childList: true });
+	}
+	function removeMutationObserver() {
+		mutationObserver?.disconnect();
+		mutationObserver = null;
+	}
+	function onMutation(mutations) {
+		mutations.forEach((mutation) => {
+			mutation.addedNodes.forEach((node) => {
+				if (node.nodeName === 'B' || node.nodeName === 'I') {
+					removeMutationObserver();
+					forceRenderSelectContainer();
+				}
+			});
+			mutation.removedNodes.forEach((node) => {
+				if (selectStateAfterMutation) {
+					const nextState = selectStateAfterMutation;
+					caretPosInFilterQuery = 0;
+					removeMutationObserver();
+					forceRenderSelectContainer();
+					setSelectState(nextState);
+					selectStateAfterMutation = null;
+					return;
+				}
+				if (node === filterQueryEl) {
+					removeMutationObserver();
+					forceRenderSelectContainer();
+				}
+			});
+		});
+	}
+	let needsRebuild = false;
+	function forceRenderSelectContainer() {
+		needsRebuild = true;
+		store.forceCommit();
+	}
+
+	/* ---------- options list ---------- */
+	const optionsList = new OptionsList(
+		{
+			selectId,
+			getState: () => s(),
+			setSelectState,
+			inputEl: () => input,
+			clickRegionEl: () => input,
+			sizingEl: () => root,
+			// Sit directly under the input rather than under the errors below it
+			offsetY: () => (errors?.length ? -additionalInfo.offsetHeight : 0),
+			persistFilterQueryOnClose: false,
+			advanceFocusOnTab: false,
+			onSelectionChange: () => {},
+			onOptionsListClose: () => {},
+		},
+		batched,
+	);
+
+	/* ---------- render ---------- */
+	function setFilterQueryText(text) {
+		const value = text ?? '';
+		const { firstChild } = filterQueryEl;
+		if (firstChild && firstChild === filterQueryEl.lastChild && firstChild.nodeType === Node.TEXT_NODE) {
+			if (firstChild.nodeValue !== value) firstChild.nodeValue = value;
+		} else if (filterQueryEl.textContent !== value || filterQueryEl.childNodes.length > 1) {
+			filterQueryEl.textContent = value;
+		}
+	}
+
+	function renderTokens(state) {
+		const { selectedOptions } = state;
+		const selectedTokenIndexes = state.selectedTokenIndexes || [];
+		const key = `${isDisabled}|${selectedOptions.map((o) => o.key || o.value).join('|')}`;
+		if (key !== tokensKey) {
+			tokensKey = key;
+			// Remove the old tokens and the &nbsp; text node after each
+			let node = input.firstChild.nextSibling;
+			while (node && node !== filterQueryEl) {
+				const next = node.nextSibling;
+				node.remove();
+				node = next;
+			}
+			tokenEls = selectedOptions.map((option, index) => {
+				const holder = document.createElement('div');
+				holder.innerHTML = renderV1TokenHtml(option, { isDisabled });
+				const token = holder.firstElementChild;
+				if (!isDisabled) {
+					token.addEventListener('mousedown', batched((e) => onTokenMouseDown(e, index)));
+					token
+						.querySelector('[data-qa="token_remove_icon"]')
+						?.addEventListener('mousedown', batched((e) => onTokenRemoveMouseDown(e, index)));
+				}
+				input.insertBefore(token, filterQueryEl);
+				input.insertBefore(document.createTextNode(' '), filterQueryEl);
+				return token;
+			});
+		}
+		tokenEls.forEach((token, index) => setV1TokenSelected(token, selectedTokenIndexes.indexOf(index) !== -1));
+	}
+
+	function render(state) {
+		const { focused, filterQuery, selectedOptions, isExpanded, activeRowIndex, composing } = state;
+		const invalid = !!errors?.length;
+
+		if (needsRebuild) {
+			needsRebuild = false;
+			buildInput();
+		}
+
+		inputContainer.className = [
+			V1_CLASSES.multiSelectInput,
+			isDisabled && V1_CLASSES.disabled,
+			focused && !isDisabled && V1_CLASSES.focused,
+			V1_CLASSES.large,
+			invalid && V1_CLASSES.invalid,
+			!selectedOptions.length && V1_CLASSES.initial,
+			V1_CLASSES.formSizeLarge,
+		]
+			.filter(Boolean)
+			.join(' ');
+
+		setAttr(input, 'aria-disabled', String(isDisabled));
+		setAttr(input, 'aria-expanded', String(!!isExpanded));
+		setAttr(
+			input,
+			'aria-activedescendant',
+			!isDisabled && typeof activeRowIndex === 'number' ? buddyId(selectId, `option_${activeRowIndex}`) : null,
+		);
+		const describedBy = [...(invalid ? errors.map(({ id }) => id) : []), ariaDescribedBy].filter(Boolean);
+		setAttr(input, 'aria-describedby', describedBy.length ? describedBy.join(' ') : null);
+		setAttr(input, 'aria-placeholder', !filterQuery && !selectedOptions.length ? placeholderText : null);
+		setAttr(input, 'aria-invalid', String(invalid));
+		setAttr(input, 'tabindex', isDisabled ? null : '0');
+		setAttr(input, 'contenteditable', String(!isDisabled));
+
+		renderTokens(state);
+		setFilterQueryText(filterQuery);
+
+		const showPlaceholder = !composing && !filterQuery && !selectedOptions.length;
+		if (showPlaceholder && !placeholderEl) {
+			placeholderEl = document.createElement('div');
+			placeholderEl.setAttribute('aria-hidden', 'true');
+			placeholderEl.className = V1_CLASSES.placeholder;
+			placeholderEl.textContent = placeholderText;
+			placeholderEl.addEventListener('mousedown', batched(() => !isDisabled && onPlaceholderMouseDown()));
+			inputContainer.appendChild(placeholderEl);
+		} else if (!showPlaceholder && placeholderEl) {
+			placeholderEl.remove();
+			placeholderEl = null;
+		}
+
+		const errorsHtml = invalid ? errors.map((error) => renderFieldErrorHtml(error)).join('') : '';
+		if (additionalInfo.__html !== errorsHtml) {
+			additionalInfo.__html = errorsHtml;
+			additionalInfo.innerHTML = errorsHtml;
+		}
+	}
+
+	// MultiSelectInput.componentDidUpdate
+	function inputDidUpdate(prev, state) {
+		if (!mutationObserver) {
+			attachMutationObserver();
+			focusInput();
+		}
+		const filterQueryChanged =
+			state.filterQuery?.length && state.filterQuery !== prev.filterQuery && caretPosInFilterQuery !== -1;
+		if (filterQueryChanged) updateCaretPosInFilterQuery();
+
+		// possiblyRepositionOptionsList is handled by the options list measuring on every update
+		const selectedTokenIndexes = state.selectedTokenIndexes || [];
+		const prevIndexes = prev.selectedTokenIndexes || [];
+		const indexesChanged =
+			selectedTokenIndexes.length &&
+			(selectedTokenIndexes.length !== prevIndexes.length || selectedTokenIndexes.some((v, i) => v !== prevIndexes[i]));
+		if (indexesChanged) {
+			if (state.isExpanded) setSelectState({ isExpanded: false });
+			scrollSelectedTokenIntoView();
+		}
+		if (prev.isDisabledProp && !isDisabled) moveCursorAndScrollToFilterQuery();
+
+		const prevKey = prev.selectedOptions.map((o) => o.value).join('|');
+		const nextKey = state.selectedOptions.map((o) => o.value).join('|');
+		if (prevKey !== nextKey) {
+			onSelectedItemsChange?.(state.selectedOptions);
+			scrollFilterQueryIntoView();
+		}
+		inputHeight = input.offsetHeight;
+
+		const shouldSelectAllTokens =
+			state.hasKeyboardFocus &&
+			!prev.hasKeyboardFocus &&
+			state.activeRowIndex === undefined &&
+			!allTokensAreSelected();
+		if (shouldSelectAllTokens) selectAllTokens();
+	}
+
+	let lastDisabled = isDisabled;
+	function commit(prev, next) {
+		const state = s();
+		render(state);
+		inputDidUpdate({ ...prev, isDisabledProp: lastDisabled }, state);
+		lastDisabled = isDisabled;
+		// ControlledMultiSelect doesn't render the options list while disabled
+		if (isDisabled) {
+			if (optionsList.mounted) optionsList.unmount();
+		} else {
+			optionsList.update();
+		}
+	}
+
+	buildInput();
+	attachMutationObserver();
+	store.forceCommit();
+
+	return {
+		input: () => input,
+		focus: () => focusInput(),
+		setProps: batched((next) => {
+			isDisabled = !!next.isDisabled;
+			errors = next.errors;
+			store.forceCommit();
+		}),
+		destroy() {
+			document.removeEventListener('selectionchange', onDocumentSelectionChange);
+			document.removeEventListener('mousedown', onDocumentMouseDown);
+			document.removeEventListener('mouseup', onDocumentMouseUp);
+			keyboardMode.listeners.delete(onKeyboardModeChange);
+			removeMutationObserver();
+			optionsList.update = () => {};
+			if (optionsList.mounted) OptionsList.prototype.unmount.call(optionsList);
+			root.remove();
+		},
+	};
+}
+
+/* ==========================================================================
+   Preview modal (BaseModal + the language preview modal's form logic)
+   ========================================================================== */
+
+const MOCK_LOCALES = [
+	['Abkhazian', 'ab'], ['Afar', 'aa'], ['Afrikaans', 'af'], ['Akan', 'ak'], ['Albanian', 'sq'],
+	['Amharic', 'am'], ['Arabic', 'ar'], ['Armenian', 'hy'], ['Assamese', 'as'], ['Aymara', 'ay'],
+	['Azerbaijani', 'az'], ['Basque', 'eu'], ['Belarusian', 'be'], ['Bengali', 'bn'], ['Bihari', 'bh'],
+	['Bislama', 'bi'], ['Bosnian', 'bs'], ['Breton', 'br'], ['Bulgarian', 'bg'], ['Burmese', 'my'],
+	['Catalan', 'ca'], ['Cebuano', 'ceb'], ['Cherokee', 'chr'], ['Chinese (Simplified)', 'zh'],
+	['Chinese (Traditional)', 'zh-Hant'], ['Croatian', 'hr'], ['Czech', 'cs'], ['Danish', 'da'],
+	['Dutch', 'nl'], ['English', 'en'], ['English (UK)', 'en-GB', true], ['English (US)', 'en-US', true],
+	['Estonian', 'et'], ['Faroese', 'fo'], ['Fijian', 'fj'], ['Finnish', 'fi'], ['French', 'fr'],
+	['Frisian', 'fy'], ['Galician', 'gl'], ['Ganda', 'lg'], ['Georgian', 'ka'], ['German', 'de'],
+	['Greek', 'el'], ['Greenlandic', 'kl'], ['Guarani', 'gn'], ['Gujarati', 'gu'], ['Hausa', 'ha'],
+	['Hawaiian', 'haw'], ['Hebrew', 'he'], ['Hindi', 'hi'], ['Hmong', 'hmn'], ['Hungarian', 'hu'],
+	['Igbo', 'ig'], ['Indonesian', 'id'], ['Inuktitut', 'iu'], ['Inupiaq', 'ik'], ['Irish', 'ga'],
+	['Italian', 'it'], ['Japanese', 'ja'], ['Javanese', 'jv'], ['Kannada', 'kn'], ['Kazakh', 'kk'],
+	['Khasi', 'kha'], ['Khmer', 'km'], ['Kinyarwanda', 'rw'], ['Kirundi', 'rn'], ['Korean', 'ko'],
+	['Kurdish', 'ku'], ['Kyrgyz', 'ky'], ['Lao', 'lo'], ['Latvian', 'lv'], ['Limbu', 'li'],
+	['Lingala', 'ln'], ['Lithuanian', 'lt'], ['Macedonian', 'mk'], ['Malagasy', 'mg'], ['Malay', 'ms'],
+	['Malayalam', 'ml'], ['Maltese', 'mt'], ['Manx', 'gv'], ['Maori', 'mi'], ['Marathi', 'mr'],
+	['Mongolian', 'mn'], ['Nauru', 'na'], ['Nepali', 'ne'], ['Norwegian', 'no'], ['Nso', 'nso-ZA'],
+	['Nyanja', 'ny'], ['Occitan', 'oc'], ['Oriya', 'or'], ['Oromo', 'om'], ['Pashto', 'ps'],
+	['Persian', 'fa'], ['Polish', 'pl'], ['Portuguese', 'pt'], ['Portuguese (Brazil)', 'pt-BR', true],
+	['Portuguese (Portugal)', 'pt-PT', true], ['Punjabi', 'pa'], ['Quechua', 'qu'], ['Romanian', 'ro'],
+	['Romansh', 'rm'], ['Russian', 'ru'], ['Samoan', 'sm'], ['Sango', 'sg'], ['Serbian', 'sr'],
+	['Sesotho', 'st'], ['Setswana', 'tn'], ['Shona', 'sn'], ['Sindhi', 'sd'], ['Sinhalese', 'si'],
+	['Slovak', 'sk'], ['Slovenian', 'sl'], ['Somali', 'so'], ['South Ndebele', 'nr'], ['Spanish', 'es'],
+	['Spanish (Latin America)', 'es-LA', true], ['Spanish (Spain)', 'es-ES', true], ['Sundanese', 'su'],
+	['Swahili', 'sw'], ['Swati', 'ss'], ['Swedish', 'sv'], ['Syriac', 'syr'], ['Tagalog', 'tl'],
+	['Tajik', 'tg'], ['Tamil', 'ta'], ['Tatar', 'tt'], ['Telugu', 'te'], ['Thai', 'th'], ['Tongan', 'to'],
+	['Tsonga', 'ts'], ['Turkish', 'tr'], ['Turkmen', 'tk'], ['Uighur', 'ug'], ['Ukrainian', 'uk'],
+	['Urdu', 'ur'], ['Uzbek', 'uz'], ['Venda', 've'], ['Vietnamese', 'vi'], ['Waray', 'war'],
+	['Welsh', 'cy'], ['Wolof', 'wo'], ['Xhosa', 'xh'], ['Yiddish', 'yi'], ['Yoruba', 'yo'],
+	['Zapotec', 'zzp'], ['Zhuang', 'za'], ['Zulu', 'zu'],
+].map(([name, locale, exclude]) => ({ name, locale, exclude: !!exclude }));
+
+const PRESELECTED_LANGUAGE_CODES = ['en', 'fr', 'pt'];
+const LANGUAGES_LABEL = 'Translation languages (Version 1)';
+const LANGUAGES_DESCRIPTION = 'We’ll offer message translations in these languages';
+const SEARCH_PLACEHOLDER = 'Search to add languages';
+const MODAL_TITLE = 'Translation languages (Version 1)';
+const SHOW_TRANSLATE_BUTTON_LABEL = 'Show Translate button on messages';
+const CANCEL_LABEL = 'Cancel';
+const SUBMIT_LABEL = 'Submit';
+const MAX_LANGUAGES = 5;
+const MAX_LANGUAGES_ERROR = 'Maximum exceeded: please choose at most 5 languages.';
+
+const toOption = ({ name, locale }) => ({ label: name, value: locale });
+const LANGUAGE_OPTIONS = MOCK_LOCALES.filter((l) => !l.exclude).map(toOption);
+const getSelectedLanguageOptions = (codes) => MOCK_LOCALES.filter((l) => codes.includes(l.locale)).map(toOption);
+
+const FOCUSABLE_SELECTOR =
+	'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex], [contenteditable]';
+
+const isTabbable = (el) => {
+	if (el.closest('[hidden]') || el.getAttribute('tabindex') === '-1') return false;
+	if (el.isContentEditable === false && el.getAttribute('contenteditable') === 'false' && !el.hasAttribute('tabindex')) {
+		return false;
+	}
+	const rect = el.getBoundingClientRect();
+	return rect.width > 0 || rect.height > 0;
+};
+
+/**
+ * Opens the preview modal. `createSelect(mountEl, props)` builds the version-specific multi-select
+ * and returns { setProps, destroy, focus? }. `focusOnOpen(select)` lands initial focus.
+ */
+function openPreviewModal({ createSelect, focusOnOpen, onClosed }) {
+	const titleId = `modal_title_${uuid()}`;
+	const checkboxId = `show_translate_${uuid()}`;
+	const descriptionId = `languages_description_${uuid()}`;
+	const errorId = `${titleId}_error`;
+
+	let selectedLanguages = getSelectedLanguageOptions(PRESELECTED_LANGUAGE_CODES);
+	let showTranslateButton = true;
+	let showMaxError = false;
+
+	const portal = document.createElement('div');
+	portal.className = 'ReactModalPortal c-sk-modal_portal';
+	portal.innerHTML = renderModalHtml({ titleId, checkboxId, descriptionId });
+	document.body.appendChild(portal);
+
+	const overlay = portal.querySelector('.c-sk-overlay');
+	const content = portal.querySelector('.c-sk-modal');
+	const checkbox = portal.querySelector(`#${checkboxId}`);
+	const selectMount = portal.querySelector('[data-select-mount]');
+	const cancelButton = portal.querySelector('[data-qa="cancel_button"]');
+	const submitButton = portal.querySelector('[data-qa="submit_button"]');
+	const closeButton = portal.querySelector('[data-qa="sk_close_modal_button"]');
+
+	const getErrors = () => (showMaxError ? [{ id: errorId, message: MAX_LANGUAGES_ERROR }] : undefined);
+	const syncSelect = () => {
+		select.setProps({ isDisabled: !showTranslateButton, errors: getErrors() });
+		announceErrors(getErrors());
+	};
+
+	const select = createSelect(selectMount, {
+		selectId: 'languages_multi_select',
+		ariaLabel: LANGUAGES_LABEL,
+		ariaDescribedBy: descriptionId,
+		placeholder: SEARCH_PLACEHOLDER,
+		placeholderText: SEARCH_PLACEHOLDER,
+		options: LANGUAGE_OPTIONS,
+		initialSelectedOptions: getSelectedLanguageOptions(PRESELECTED_LANGUAGE_CODES),
+		isDisabled: false,
+		errors: undefined,
+		onSelectedItemsChange: (languages) => {
+			selectedLanguages = languages;
+			// Clear the error as soon as the selection is back within the limit
+			if (languages.length <= MAX_LANGUAGES && showMaxError) {
+				showMaxError = false;
+				syncSelect();
+			}
+		},
+	});
+
+	const close = () => {
+		document.removeEventListener('keydown', onDocumentKeyDownCapture, true);
+		scrollResizeObserver.disconnect();
+		select.destroy();
+		portal.remove();
+		onClosed?.();
+	};
+
+	checkbox.addEventListener('change', () => {
+		showTranslateButton = checkbox.checked;
+		// Hiding the Translate button disables the select, so drop any error
+		if (!showTranslateButton) showMaxError = false;
+		syncSelect();
+	});
+
+	submitButton.addEventListener('click', () => {
+		if (showTranslateButton && selectedLanguages.length > MAX_LANGUAGES) {
+			showMaxError = true;
+			syncSelect();
+			return;
+		}
+		close();
+	});
+	cancelButton.addEventListener('click', close);
+	closeButton.addEventListener('click', close);
+
+	// ReactModal: Escape on the dialog requests close unless something already handled it
+	content.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape' || e.keyCode === 27) {
+			if (e.defaultPrevented) return;
+			e.preventDefault();
+			e.stopPropagation();
+			close();
+			return;
+		}
+		if (e.key === 'Tab') scopeTab(e);
+	});
+
+	// ReactModal's scopeTab: keep Tab focus within the dialog
+	function scopeTab(e) {
+		const tabbable = Array.from(content.querySelectorAll(FOCUSABLE_SELECTOR)).filter(isTabbable);
+		if (!tabbable.length) {
+			e.preventDefault();
+			return;
+		}
+		const first = tabbable[0];
+		const last = tabbable[tabbable.length - 1];
+		const active = document.activeElement;
+		if (e.shiftKey && (active === first || active === content)) {
+			e.preventDefault();
+			last.focus();
+		} else if (!e.shiftKey && active === last) {
+			e.preventDefault();
+			first.focus();
+		}
+	}
+
+	// Focus that escapes to the body (e.g. after a click-away) returns into the dialog on Tab
+	function onDocumentKeyDownCapture(e) {
+		if (e.key !== 'Tab' || content.contains(document.activeElement)) return;
+		if (document.querySelector('.c-popover')) return;
+		e.preventDefault();
+		const tabbable = Array.from(content.querySelectorAll(FOCUSABLE_SELECTOR)).filter(isTabbable);
+		(e.shiftKey ? tabbable[tabbable.length - 1] : tabbable[0])?.focus();
+	}
+	document.addEventListener('keydown', onDocumentKeyDownCapture, true);
+
+	// Overlay click closes the modal (only for a press that started and ended on the overlay)
+	let overlayPressed = false;
+	overlay.addEventListener('mousedown', (e) => {
+		overlayPressed = e.target === overlay;
+	});
+	overlay.addEventListener('click', (e) => {
+		if (overlayPressed && e.target === overlay) close();
+		overlayPressed = false;
+	});
+
+	// Scrollbar sizes its child to the content's measured width (the hider overhangs by 50px)
+	const scrollContent = portal.querySelector('.c-sk-modal_content');
+	const scrollChild = portal.querySelector('.c-scrollbar__child');
+	const sizeScrollChild = () => {
+		scrollChild.style.width = `${scrollContent.clientWidth}px`;
+	};
+	sizeScrollChild();
+	const scrollResizeObserver = new ResizeObserver(sizeScrollChild);
+	scrollResizeObserver.observe(scrollContent);
+
+	keyboardMode.sync();
+
+	// shouldFocusAfterRender: focus the dialog unless focus already landed inside it, then onAfterOpen
+	if (!content.contains(document.activeElement)) content.focus();
+	focusOnOpen?.(select, content);
+
+	return { close };
+}
+
+function mountPreview({ createSelect, focusOnOpen }) {
+	const launcher = document.querySelector('[data-launcher]');
+	const open = () => {
+		launcher.hidden = true;
+		openPreviewModal({
+			createSelect,
+			focusOnOpen,
+			onClosed: () => {
+				launcher.hidden = false;
+				launcher.querySelector('button').focus();
+			},
+		});
+	};
+	launcher.querySelector('button').addEventListener('click', open);
+	open();
+}
+
+
+mountPreview({
+	createSelect: createMultiSelectV1,
+	// v1: MultiSelect focusOnMount focuses the input as it mounts
+		focusOnOpen: (select) => select.focus(),
+});
+</script>
+</body>
+</html>
