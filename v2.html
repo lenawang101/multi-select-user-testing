@@ -116,17 +116,6 @@ html, body { height: 100%; }
 .c-sk-modal_footer_actions > * { vertical-align: bottom; margin-right: 12px; }
 .c-sk-modal_footer_actions > :last-child { margin-right: 0; }
 
-/* ---------- checkbox + inline label ---------- */
-.c-input_checkbox { box-sizing: border-box; display: block; flex: none; margin: 0 12px 0 0; padding: 0 12px; cursor: pointer; background-color: #ffffff; font-size: 18px; }
-.c-input_checkbox[disabled] { cursor: default; }
-.c-input_checkbox:focus { outline-style: auto; }
-.c-input_checkbox--focus-visible:focus { outline: none; box-shadow: 0 0 0 1px #1264a3, 0 0 0 5px rgba(18, 100, 163, 0.3); border-radius: 8px; }
-.c-label { font-size: 15px; line-height: 1.46667; font-weight: 700; }
-.c-label__text { display: block; padding-bottom: 8px; }
-.c-label--inline { display: flex; align-items: baseline; vertical-align: middle; margin-bottom: 4px; }
-.c-label--inline .c-label__text { order: 1; padding-bottom: 0; font-weight: 400; position: relative; top: -1px; }
-.c-label--pointer { cursor: pointer; }
-
 /* ---------- buttons ---------- */
 .c-button { --sk_button-styles-radius: 4px; position: relative; display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: var(--sk_button-styles-radius); outline: none; -webkit-appearance: none; appearance: none; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; cursor: pointer; text-align: center; text-decoration: none; white-space: nowrap; transition-property: color, background-color, border-color; transition-duration: 80ms; transition-timing-function: cubic-bezier(0.36, 0.19, 0.29, 1); }
 .c-button:is(:hover, :active, :focus) { text-decoration: none; }
@@ -1074,16 +1063,6 @@ const KEYBOARD_KEY_ENTER_HTML =
 function renderFieldErrorHtml({ id, message }) {
 	return `<div data-qa="error" class="c-inline_alert c-field_input__helpers" id="${escapeHtml(id)}">${WARNING_SVG}&nbsp;<div style="display: contents;">${escapeHtml(message)}</div></div>`;
 }
-const announcedErrors = new Set();
-function announceErrors(errors) {
-	(errors || []).forEach(({ id, message }) => {
-		const key = `${id}:${message}`;
-		if (announcedErrors.has(key)) return;
-		announcedErrors.add(key);
-		announcer.send({ message, assertive: true });
-	});
-	if (!errors?.length) announcedErrors.clear();
-}
 
 // Plain-label Token (js/modern/slack-kit/token/token.tsx renderPlainToken)
 function renderTokenHtml(option, { extraClass = '', removeClass, isDisabled, tokenAttrs = '', removeAttrs = '' }) {
@@ -1093,7 +1072,7 @@ function renderTokenHtml(option, { extraClass = '', removeClass, isDisabled, tok
 	}</span>`;
 }
 
-function renderModalHtml({ titleId, checkboxId, descriptionId }) {
+function renderModalHtml({ titleId, descriptionId }) {
 	return `
 <div class="ReactModal__Overlay c-sk-overlay" style="padding: 28px;">
 	<div class="ReactModal__Content ReactModal__Content--after-open c-sk-modal c-sk-modal--fixed c-sk-modal--responsive" tabindex="-1" role="dialog" aria-labelledby="${titleId}" aria-modal="true">
@@ -1107,9 +1086,6 @@ function renderModalHtml({ titleId, checkboxId, descriptionId }) {
 				<div data-qa="slack_kit_scrollbar" role="presentation" class="c-scrollbar__hider">
 					<div role="presentation" class="c-scrollbar__child">
 						<div class="c-sk-modal_content__inner" data-qa="modal-content-inner">
-							<div class="c-sk-modal_content_section ">
-								<label for="${checkboxId}" class="c-label c-label--inline c-label--pointer" data-qa-label="true" data-qa-label-type="inline"><span class="c-label__text" data-qa-label-text="true">${escapeHtml(SHOW_TRANSLATE_BUTTON_LABEL)}</span><span class="c-label__children" data-qa-label-children="true"><input id="${checkboxId}" name="${checkboxId}" type="checkbox" class="c-input_checkbox" checked></span></label>
-							</div>
 							<div class="c-sk-modal_content_section ">
 								<div class="padding_top_100 margin_bottom_50">
 									<div data-select-mount></div>
@@ -1133,8 +1109,8 @@ function renderModalHtml({ titleId, checkboxId, descriptionId }) {
 </div>`;
 }
 
-/* FocusEventManager: whether the user is driving the page with the keyboard. Buttons and the
-   checkbox show their focus rings only in keyboard mode; v1 also uses it to select all tokens. */
+/* FocusEventManager: whether the user is driving the page with the keyboard. Buttons show their
+   focus rings only in keyboard mode; v1 also uses it to select all tokens. */
 const KEYBOARD_NAVIGATION_KEYS = ['Tab', 'F6', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 const keyboardMode = (() => {
 	const mode = { value: false, relatedEvent: null, listeners: new Set() };
@@ -1143,9 +1119,6 @@ const keyboardMode = (() => {
 	const syncFocusVisibleClasses = () => {
 		document.querySelectorAll('.c-button, .c-icon_button').forEach((el) => {
 			el.classList.toggle('c-button--focus-visible', mode.value);
-		});
-		document.querySelectorAll('.c-input_checkbox').forEach((el) => {
-			el.classList.toggle('c-input_checkbox--focus-visible', mode.value);
 		});
 	};
 	const setValue = (value) => {
@@ -1979,14 +1952,11 @@ const MOCK_LOCALES = [
 
 const PRESELECTED_LANGUAGE_CODES = ['en', 'fr', 'pt'];
 const LANGUAGES_LABEL = 'Translation languages (Version 2)';
-const LANGUAGES_DESCRIPTION = 'We’ll offer translations';
+const LANGUAGES_DESCRIPTION = 'We’ll offer translations in these languages';
 const SEARCH_PLACEHOLDER = 'Search to add languages';
 const MODAL_TITLE = 'Translation languages (Version 2)';
-const SHOW_TRANSLATE_BUTTON_LABEL = 'Offer translations for messages';
 const CANCEL_LABEL = 'Cancel';
 const SUBMIT_LABEL = 'Submit';
-const MAX_LANGUAGES = 5;
-const MAX_LANGUAGES_ERROR = 'Maximum exceeded: please choose at most 5 languages.';
 
 const toOption = ({ name, locale }) => ({ label: name, value: locale });
 const LANGUAGE_OPTIONS = MOCK_LOCALES.filter((l) => !l.exclude).map(toOption);
@@ -2010,32 +1980,19 @@ const isTabbable = (el) => {
  */
 function openPreviewModal({ createSelect, focusOnOpen, onClosed }) {
 	const titleId = `modal_title_${uuid()}`;
-	const checkboxId = `show_translate_${uuid()}`;
 	const descriptionId = `languages_description_${uuid()}`;
-	const errorId = `${titleId}_error`;
-
-	let selectedLanguages = getSelectedLanguageOptions(PRESELECTED_LANGUAGE_CODES);
-	let showTranslateButton = true;
-	let showMaxError = false;
 
 	const portal = document.createElement('div');
 	portal.className = 'ReactModalPortal c-sk-modal_portal';
-	portal.innerHTML = renderModalHtml({ titleId, checkboxId, descriptionId });
+	portal.innerHTML = renderModalHtml({ titleId, descriptionId });
 	document.body.appendChild(portal);
 
 	const overlay = portal.querySelector('.c-sk-overlay');
 	const content = portal.querySelector('.c-sk-modal');
-	const checkbox = portal.querySelector(`#${checkboxId}`);
 	const selectMount = portal.querySelector('[data-select-mount]');
 	const cancelButton = portal.querySelector('[data-qa="cancel_button"]');
 	const submitButton = portal.querySelector('[data-qa="submit_button"]');
 	const closeButton = portal.querySelector('[data-qa="sk_close_modal_button"]');
-
-	const getErrors = () => (showMaxError ? [{ id: errorId, message: MAX_LANGUAGES_ERROR }] : undefined);
-	const syncSelect = () => {
-		select.setProps({ isDisabled: !showTranslateButton, errors: getErrors() });
-		announceErrors(getErrors());
-	};
 
 	const select = createSelect(selectMount, {
 		selectId: 'languages_multi_select',
@@ -2045,16 +2002,6 @@ function openPreviewModal({ createSelect, focusOnOpen, onClosed }) {
 		placeholderText: SEARCH_PLACEHOLDER,
 		options: LANGUAGE_OPTIONS,
 		initialSelectedOptions: getSelectedLanguageOptions(PRESELECTED_LANGUAGE_CODES),
-		isDisabled: false,
-		errors: undefined,
-		onSelectedItemsChange: (languages) => {
-			selectedLanguages = languages;
-			// Clear the error as soon as the selection is back within the limit
-			if (languages.length <= MAX_LANGUAGES && showMaxError) {
-				showMaxError = false;
-				syncSelect();
-			}
-		},
 	});
 
 	const close = () => {
@@ -2065,21 +2012,7 @@ function openPreviewModal({ createSelect, focusOnOpen, onClosed }) {
 		onClosed?.();
 	};
 
-	checkbox.addEventListener('change', () => {
-		showTranslateButton = checkbox.checked;
-		// Hiding the Translate button disables the select, so drop any error
-		if (!showTranslateButton) showMaxError = false;
-		syncSelect();
-	});
-
-	submitButton.addEventListener('click', () => {
-		if (showTranslateButton && selectedLanguages.length > MAX_LANGUAGES) {
-			showMaxError = true;
-			syncSelect();
-			return;
-		}
-		close();
-	});
+	submitButton.addEventListener('click', close);
 	cancelButton.addEventListener('click', close);
 	closeButton.addEventListener('click', close);
 
